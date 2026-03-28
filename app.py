@@ -254,7 +254,7 @@ def create_placeholder_logo():
             except:
                 font = ImageFont.load_default()
         
-        d.text((60, 40), "Prozilla", fill='#121212', font=font, anchor="mm")
+        d.text((60, 40), "Nexor", fill='#121212', font=font, anchor="mm")
         d.text((60, 70), "VPN", fill='#121212', font=font, anchor="mm")
         
         img.save(logo_path, "PNG")
@@ -585,7 +585,7 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
                 f"fp=chrome&"
                 f"sni={clean_sni}&"
                 f"sid={short_id}#"
-                f"Prozilla-VPN-{user_id}-{server['id']}"
+                f"Nexor-VPN-{user_id}-{server['id']}"
             )
         else:
             vless_link = (
@@ -593,7 +593,7 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
                 f"encryption=none&"
                 f"type=tcp&"
                 f"security=none#"
-                f"Prozilla-VPN-{user_id}-{server['id']}"
+                f"Nexor-VPN-{user_id}-{server['id']}"
             )
         
         config = {

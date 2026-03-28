@@ -775,7 +775,7 @@
     <div class="top-bar-right">
       <div class="user-name" id="userName">Загрузка...</div>
       <div class="menu-btn" onclick="toggleMenu()">
-        <img src="https://prozillavpn-production.up.railway.app/static/menu.svg" alt="menu">
+        <img src="https://nexorvpn-production.up.railway.app/static/menu.svg" alt="menu">
       </div>
     </div>
   </div>
@@ -986,7 +986,7 @@
 
   <script>
     // ==================== КОНФИГУРАЦИЯ ====================
-    const API_BASE_URL = "https://prozillavpn-production.up.railway.app";
+    const API_BASE_URL = "https://nexorvpn-production.up.railway.app";
     const APP_VERSION = "2.0.1";
     
     // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
@@ -1110,18 +1110,18 @@
       const logoContainer = document.getElementById('logoContainer');
       if (!logoContainer) return;
       
-      const logoUrl = 'https://prozillavpn-production.up.railway.app/static/logo.png';
+      const logoUrl = 'https://nexorvpn-production.up.railway.app/static/logo.png';
       const img = new Image();
       
       img.onload = function() {
-        logoContainer.innerHTML = `<img src="${logoUrl}" alt="ProzillaVPN Logo" class="logo">`;
+        logoContainer.innerHTML = `<img src="${logoUrl}" alt="NexorVPN Logo" class="logo">`;
         console.log('✅ Logo loaded successfully');
       };
       
       img.onerror = function() {
         logoContainer.innerHTML = `
           <div class="logo-placeholder">
-            ProzillaVPN
+            NexorVPN
           </div>
         `;
         console.log('📝 Showing logo placeholder');
@@ -1472,7 +1472,7 @@
     function showRules() {
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.showAlert(
-          'Правила использования ProzillaVPN:\n\n' +
+          'Правила использования NexorVPN:\n\n' +
           '1. Запрещено использование для незаконной деятельности\n' +
           '2. Нельзя передавать аккаунт третьим лицам\n' +
           '3. Возврат средств возможен в течение 3 дней\n' +
@@ -1481,7 +1481,7 @@
           '6. Реферальные бонусы начисляются после покупки тарифа'
         );
       } else {
-        alert('Правила использования ProzillaVPN:\n\n1. Запрещено использование для незаконной деятельности\n2. Нельзя передавать аккаунт третьим лицам\n3. Возврат средств возможен в течение 3 дней\n4. VLESS ключ выдается только при активной подписке\n5. Подписка работает по принципу накопления дней\n6. Реферальные бонусы начисляются после покупки тарифа');
+        alert('Правила использования NexorVPN:\n\n1. Запрещено использование для незаконной деятельности\n2. Нельзя передавать аккаунт третьим лицам\n3. Возврат средств возможен в течение 3 дней\n4. VLESS ключ выдается только при активной подписке\n5. Подписка работает по принципу накопления дней\n6. Реферальные бонусы начисляются после покупки тарифа');
       }
       toggleMenu();
     }
@@ -2132,7 +2132,7 @@
     // ==================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ====================
 
     document.addEventListener('DOMContentLoaded', function() {
-      console.log(`🚀 ProzillaVPN WebApp v${APP_VERSION} starting...`);
+      console.log(`🚀 NexorVPN WebApp v${APP_VERSION} starting...`);
       
       // Инициализируем Telegram WebApp
       if (window.Telegram && window.Telegram.WebApp) {
