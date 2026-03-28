@@ -3,60 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProzillaVPN</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <title>NexorVPN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --primary: linear-gradient(135deg, rgb(255, 133, 26), rgb(245, 168, 61));
-      --secondary: rgb(255, 133, 26);
-      --bg: #121212;
-      --text: #FFFFFF;
-      --card: #1E1E1E;
+      --primary: linear-gradient(135deg, #7a5cff, #b26bff);
+      --accent: #9d7bff;
+      --bg: #0b0b12;
+      --card: rgba(20, 20, 35, 0.6);
+      --text: #ffffff;
+      --border: rgba(255,255,255,0.08);
+      --glow: 0 0 25px rgba(157,123,255,0.35);
     }
+
     * {
-      font-family: 'Montserrat', sans-serif;
+      font-family: 'Inter', sans-serif;
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
+
     body {
-      background: var(--bg);
+      background: radial-gradient(circle at top, #1a1235, #0b0b12);
       color: var(--text);
       padding: 16px;
       min-height: 100vh;
     }
-    
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .card {
+      margin-bottom: 20px;
+      padding: 20px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    /* ====== TOP BAR ====== */
+
     .top-bar {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 16px;
       align-items: center;
+      margin-bottom: 24px;
     }
+
     .logo-container {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
     }
+
     .logo {
       height: 40px;
       width: auto;
       object-fit: contain;
     }
+
     .logo-placeholder {
-      color: var(--primary);
-      background: -webkit-linear-gradient(135deg, rgb(255, 133, 26), rgb(245, 168, 61));
+      font-weight: 900;
+      font-style: italic;
+      font-size: 22px;
+      background: var(--primary);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 18px;
-      text-align: center;
-      text-transform: uppercase;
     }
+
+    #logoContainer img {
+      max-width: 100px;
+    }
+
     .top-bar-right {
       display: flex;
       align-items: center;
@@ -98,7 +120,30 @@
       opacity: 0.8;
       transform: scale(0.95);
     }
-    
+
+    .user-name {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .vless-config {
+      background: rgba(157, 123, 255, 0.08);
+      border: 1px solid var(--secondary);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 10px 0;
+      display: none;
+    }
+
+    .subscription-status {
+      color: var(--primary);
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
     .config-box {
       background: #ff851a0d;
       border: 1px solid var(--secondary);
@@ -122,7 +167,8 @@
       position: absolute;
       top: 70px;
       right: 16px;
-      background: #1E1E1E;
+      background: rgba(20, 20, 40, 0.55);
+      backdrop-filter: blur(30px);
       border-radius: 8px;
       display: none;
       flex-direction: column;
@@ -131,304 +177,100 @@
       z-index: 100;
       overflow: hidden;
     }
+
     .menu-dropdown a {
       display: block;
       padding: 12px 16px;
-      color: #ff851a;
+      color: #7a5cff;
       text-decoration: none;
       font-size: 14px;
       font-weight: 500;
       transition: background 0.2s;
     }
+
     .menu-dropdown a:hover {
       background: rgba(255,255,255,0.1);
     }
+
     .menu-dropdown .divider {
       height: 1px;
       background: rgba(255,255,255,0.1);
       margin: 4px 0;
     }
+
+    /* ====== CARD ====== */
+
     .card {
-      background: var(--card);
-      border-radius: 12px;
+      background: rgba(20, 20, 40, 0.55);
+      backdrop-filter: blur(30px);
+      border-radius: 20px;
       padding: 20px;
       margin-bottom: 16px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow:
+        0 10px 40px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.05);
     }
-    .subscription-info {
-      background: #ff851a0d;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 12px 0;
-      font-size: 14px;
-    }
-    .days-counter {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-      padding: 8px;
-      background: rgba(176, 203, 31, 0.05);
-      border-radius: 6px;
-    }
-    .days-number {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--primary);
-      min-width: 40px;
-      text-align: center;
-    }
-    .days-label {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-    .vless-config {
-      background: #ff851a0d;
-      border: 1px solid var(--secondary);
-      border-radius: 8px;
-      padding: 16px;
-      margin: 10px 0;
-      display: none;
-    }
+
+    /* ====== BUTTONS ====== */
+
     .button {
-      display: block;
       width: 100%;
-      padding: 12px;
-      text-align: center;
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-      margin-bottom: 12px;
-    }
-    .button-yellow {
-      background: var(--primary);
-      color: var(--text);
-    }
-    .button-yellow:active {
-      opacity: 0.9;
-      transform: scale(0.98);
-    }
-    .button-outline {
-      background: transparent;
-      color: var(--primary);
-      border: 2px solid var(--secondary);
-      margin-bottom: 16px;
-    }
-    .button-outline:active {
-      background: #ff851a0d;
-    }
-    .tariff-grid {
-      display: grid;
-      gap: 16px;
-      margin-bottom: 8px;
-    }
-    .tariff-card {
-      position: relative;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 10px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .tariff-card.selected {
-      background: #ff851a0d;
-      box-shadow: 0 0 0 2px var(--primary);
-    }
-    .tariff-card.disabled {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-    .tariff-dot {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid var(--secondary);
-      transition: all 0.3s;
-    }
-    .tariff-card.selected .tariff-dot {
-      background: var(--primary);
-      box-shadow: 0 0 6px var(--primary);
-    }
-    .tariff-label {
-      font-weight: 700;
-      font-size: 16px;
-      margin-bottom: 6px;
-    }
-    .tariff-price {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--primary);
-      margin: 4px 0;
-    }
-    .tariff-trial {
-      display: inline-block;
-      padding: 4px 12px;
-      background: var(--primary);
-      color: var(--text);
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    .tariff-description {
-      font-size: 14px;
-      opacity: 0.8;
-      line-height: 1.4;
-    }
-    .referral-block {
-      border: 1px solid var(--secondary);
-      border-radius: 10px;
-      margin: 12px 0;
-      padding: 12px;
-    }
-    .referral-description {
-      font-size: 13px;
-      opacity: 0.9;
-      margin-bottom: 8px;
-      line-height: 1.4;
-    }
-    .ref-link-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #2A2A2A;
-      border-radius: 6px;
-      padding: 10px;
-      font-size: 13px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .ref-link-text {
-      color: var(--primary);
-      word-break: break-all;
-      flex-grow: 1;
-    }
-    .copy-btn {
-      background: var(--primary);
-      color: var(--text);
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: opacity 0.2s;
-    }
-    .copy-btn:active {
-      opacity: 0.8;
-    }
-    .button-help {
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-weight: 600;
-      width: 100%;
-      text-align: center;
-      cursor: pointer;
-    }
-    .loading {
-      display: none;
-      text-align: center;
-      margin: 10px 0;
-      color: var(--primary);
-    }
-    .error-message {
-      color: #ff4444;
-      font-size: 14px;
-      text-align: center;
-      margin-top: 10px;
-      display: none;
-    }
-    .success-message {
-      color: var(--primary);
-      font-size: 14px;
-      text-align: center;
-      margin-top: 10px;
-      display: none;
-    }
-    .subscription-status {
-      color: var(--primary);
-      font-size: 14px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .subscription-status .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .active-badge {
-      background: var(--primary);
-      color: var(--bg);
-    }
-    .inactive-badge {
-      background: #ff4444;
-      color: white;
-    }
-    .qr-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-    }
-    .qr-content {
-      background: var(--card);
-      padding: 20px;
+      padding: 14px;
       border-radius: 12px;
-      text-align: center;
-      max-width: 300px;
-      width: 90%;
-    }
-    .qr-image {
-      width: 200px;
-      height: 200px;
-      margin: 10px 0;
-    }
-    .close-btn {
-      background: var(--primary);
-      color: var(--bg);
+      font-weight: 700;
       border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
       cursor: pointer;
-      margin-top: 10px;
+      transition: 0.3s;
+      letter-spacing: 0.3px;
     }
-    .tariff-info {
-      background: #ff851a0d;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 12px 0;
-      font-size: 14px;
+
+    .button-yellow {
+      background: linear-gradient(135deg, #7a5cff, #b26bff);
+      border-radius: 14px;
+      font-weight: 800;
+      position: relative;
+      overflow: hidden;
+      transition: 0.3s;
+      color: #ffffff;
     }
+
+    .button-yellow::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+      transform: translateX(-100%);
+    }
+
+    .button-yellow:hover::before {
+      transform: translateX(100%);
+      transition: 0.6s;
+    }
+
+    .button-yellow:active {
+      transform: scale(0.97);
+    }
+
+    .button-outline:hover {
+      background: rgba(157,123,255,0.1);
+    }
+
+    /* ====== BALANCE ====== */
+
     .balance-info {
-      background: #ff851a0d;
-      border-radius: 8px;
-      padding: 12px;
+      background: rgba(157,123,255,0.08);
+      border-radius: 12px;
+      padding: 14px;
       margin: 8px 0;
-      font-size: 14px;
     }
+
     .payment-methods {
       display: flex;
       gap: 8px;
       margin: 12px 0;
     }
+
     .payment-method {
       flex: 1;
       padding: 12px;
@@ -438,28 +280,35 @@
       cursor: pointer;
       transition: all 0.3s;
     }
+
     .payment-method.selected {
       border-color: var(--secondary);
-      background: #ff851a0d;
+      background: rgba(157, 123, 255, 0.08);
     }
+
     .payment-method.disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
+
     .payment-icon {
       font-size: 24px;
       margin-bottom: 4px;
     }
+
     .payment-label {
       font-size: 12px;
       font-weight: 600;
     }
+
     .balance-sufficient {
       color: var(--primary);
     }
+
     .balance-insufficient {
       color: #ff4444;
     }
+
     .payment-modal {
       display: none;
       position: fixed;
@@ -472,18 +321,22 @@
       justify-content: center;
       align-items: center;
     }
+
     .payment-content {
-      background: var(--card);
+      background: rgba(20, 20, 40, 0.55);
+      backdrop-filter: blur(30px);
       padding: 20px;
       border-radius: 12px;
       text-align: center;
       max-width: 400px;
       width: 90%;
     }
+
     .add-balance-section {
       margin: 16px 0;
       padding: 16px;
-      background: #ff851a0d;
+      background: rgba(20, 20, 40, 0.55);
+      backdrop-filter: blur(30px);
       border-radius: 8px;
     }
     .amount-input {
@@ -509,7 +362,7 @@
     }
     .amount-preset {
       padding: 10px;
-      border: 2px solid var(--secondary);
+      border: 1px solid var(--secondary);
       border-radius: 6px;
       text-align: center;
       cursor: pointer;
@@ -517,7 +370,10 @@
     }
     .amount-preset.selected {
       border-color: var(--secondary);
-      background: #ff851a0d;
+      background: rgba(20, 20, 40, 1);
+      backdrop-filter: blur(30px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
     .amount-preset:active {
       transform: scale(0.95);
@@ -530,7 +386,332 @@
       animation: loading 1.5s infinite;
       border-radius: 6px;
     }
-    
+
+    /* ====== STATUS ====== */
+
+    .status-indicator {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .status-online {
+      background: rgba(0,255,150,0.1);
+      color: #00ff9c;
+    }
+
+    .status-offline {
+      background: rgba(255,0,80,0.1);
+      color: #ff4d6d;
+    }
+
+    /* ====== TARIFF ====== */
+
+    .tariff-info {
+      background: rgba(157, 123, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+
+    .tariff-grid {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+
+    .tariff-card {
+      background: rgba(255,255,255,0.03);
+      border-radius: 18px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .tariff-card:hover {
+      transform: translateY(-6px) scale(1.01);
+      box-shadow: 0 0 40px rgba(157,123,255,0.3);
+    }
+
+    .tariff-card.selected {
+      border: 1px solid #9d7bff;
+      box-shadow: 0 0 25px rgba(157,123,255,0.6);
+    }
+
+    .tariff-label {
+      font-weight: 900;
+      font-style: italic;
+      font-size: 18px;
+    }
+
+    .tariff-price {
+      font-size: 28px;
+      font-weight: 900;
+      background: var(--primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ====== REF ====== */
+
+    .referral-block {
+      border: 1px solid var(--secondary);
+      border-radius: 10px;
+      margin: 12px 0;
+      padding: 12px;
+    }
+
+    .referral-description {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .ref-link-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(157, 123, 255, 0.08);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .ref-link-text {
+      color: var(--primary);
+      word-break: break-all;
+      flex-grow: 1;
+    }
+
+    .copy-btn {
+      width: 100%;
+      background: var(--primary);
+      color: var(--text);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+
+    .copy-btn:active {
+      opacity: 0.8;
+    }
+
+    .button-help {
+      font-size: 16px;
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 600;
+      width: 100%;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    /* ====== INPUT ====== */
+
+    .amount-input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: white;
+      text-align: center;
+    }
+
+    .amount-input:focus {
+      outline: none;
+      box-shadow: var(--glow);
+    }
+
+    /* ====== MODAL ====== */
+
+    .payment-modal,
+    .qr-modal {
+      backdrop-filter: blur(10px);
+    }
+
+    /* ====== ANIMATION ====== */
+
+    @keyframes glowPulse {
+      0% { box-shadow: 0 0 10px rgba(157,123,255,0.3); }
+      50% { box-shadow: 0 0 25px rgba(157,123,255,0.7); }
+      100% { box-shadow: 0 0 10px rgba(157,123,255,0.3); }
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 10px 0;
+      color: var(--primary);
+    }
+
+    .error-message {
+      color: #ff4444;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .success-message {
+      color: var(--primary);
+      font-size: 14px;
+      text-align: center;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .subscription-status {
+      color: var(--primary);
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .subscription-status .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .active-badge {
+      background: var(--primary);
+      color: var(--bg);
+      animation: glowPulse 2s infinite;
+    }
+
+    .inactive-badge {
+      background: #ff4444;
+      color: white;
+    }
+
+    .button-yellow::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      filter: blur(20px);
+      opacity: 0.4;
+      z-index: -1;
+    }
+
+    .qr-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .qr-content {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 300px;
+      width: 90%;
+    }
+
+    .qr-image {
+      width: 200px;
+      height: 200px;
+      margin: 10px 0;
+    }
+
+    .close-btn {
+      background: var(--primary);
+      color: var(--bg);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    body {
+      background: radial-gradient(circle at 20% 20%, #1f1147, #0a0a12 60%);
+      color: white;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .bg-effects {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .glow {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, #9d7bff, transparent);
+      filter: blur(120px);
+      opacity: 0.5;
+      animation: moveGlow 12s infinite alternate;
+    }
+
+    .glow1 {
+      top: -100px;
+      left: -100px;
+    }
+
+    .glow2 {
+      bottom: -100px;
+      right: -100px;
+      animation-delay: 3s;
+    }
+
+    .active-badge {
+      background: linear-gradient(135deg, #7a5cff, #b26bff);
+      color: black;
+      font-weight: 700;
+      box-shadow: 0 0 15px rgba(157,123,255,0.7);
+    }
+
+    button, .tariff-card {
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    .top-bar {
+      backdrop-filter: blur(20px);
+      background: rgba(10,10,20,0.4);
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    @keyframes moveGlow {
+      0% { transform: translate(0,0); }
+      100% { transform: translate(100px, 50px); }
+    }
+
     @keyframes loading {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
@@ -579,6 +760,11 @@
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="bg-effects">
+    <div class="glow glow1"></div>
+    <div class="glow glow2"></div>
+  </div>
 
   <div class="top-bar">
     <div class="logo-container">
@@ -632,12 +818,12 @@
       <h3 style="color: var(--primary); margin-bottom: 12px;">🔧 VLESS Конфигурация</h3>
       <div style="margin-bottom: 12px;">
         <strong>UUID:</strong> 
-        <div style="font-family: monospace; background: #ff851a0d; padding: 8px; border-radius: 4px; margin-top: 4px; word-break: break-all; font-size: 12px;" id="vlessUuidText">
+        <div style="font-family: monospace; background: rgba(157, 123, 255, 0.08); padding: 8px; border-radius: 4px; margin-top: 4px; word-break: break-all; font-size: 12px;" id="vlessUuidText">
           Загрузка...
         </div>
       </div>
       <div id="vlessServersList"></div>
-      <div style="margin-top: 12px; padding: 12px; background: #ff851a0d; border-radius: 6px;">
+      <div style="margin-top: 12px; padding: 12px; background: rgba(157, 123, 255, 0.08); border-radius: 6px;">
         <strong>📱 Инструкции по установке:</strong>
         <ul style="margin: 8px 0; padding-left: 20px; font-size: 12px;">
           <li><strong>Android:</strong> Скачайте V2BOX из Play Store</li>
@@ -700,37 +886,29 @@
       <div class="tariff-card" id="tariff1month" onclick="selectTariff('1month')">
         <div class="tariff-dot"></div>
         <div class="tariff-label">1 Месяц</div>
-        <div class="tariff-price">169₽</div>
+        <div class="tariff-price">149₽</div>
         <div class="tariff-trial">30 дней</div>
-        <div class="tariff-description">Доступ к VPN на 30 дней. Реферал пополняет баланс</div>
-      </div>
-
-      <div class="tariff-card" id="tariff3months" onclick="selectTariff('3months')">
-        <div class="tariff-dot"></div>
-        <div class="tariff-label">3 Месяца</div>
-        <div class="tariff-price">399₽</div>
-        <div class="tariff-trial">90 дней</div>
-        <div class="tariff-description">Доступ к VPN на 90 дней. Реферал пополняет баланс</div>
-      </div>
-
-      <div class="tariff-card" id="tariff6months" onclick="selectTariff('6months')">
-        <div class="tariff-dot"></div>
-        <div class="tariff-label">6 Месяцев</div>
-        <div class="tariff-price">699₽</div>
-        <div class="tariff-trial">180 дней</div>
-        <div class="tariff-description">Доступ к VPN на 180 дней. Реферал пополняет баланс</div>
+        <div class="tariff-description">Доступ к VPN на 30 дней</div>
       </div>
 
       <div class="tariff-card" id="tariff1year" onclick="selectTariff('1year')">
         <div class="tariff-dot"></div>
-        <div class="tariff-label">1 Год</div>
-        <div class="tariff-price">1199₽</div>
-        <div class="tariff-trial">365 дней</div>
-        <div class="tariff-description">Доступ к VPN на 365 дней. Реферал пополняет баланс</div>
+        <div class="tariff-label">1 Год 🔥</div>
+        <div class="tariff-price">1188₽</div>
+        <div class="tariff-trial">99₽ / месяц</div>
+        <div class="tariff-description">Самый выгодный тариф</div>
+      </div>
+
+      <div class="tariff-card" id="tariffLifetime" onclick="selectTariff('lifetime')">
+        <div class="tariff-dot"></div>
+        <div class="tariff-label">Навсегда</div>
+        <div class="tariff-price">9999₽</div>
+        <div class="tariff-trial">∞ доступ</div>
+        <div class="tariff-description">Пожизненный VPN без ограничений</div>
       </div>
     </div>
     
-    <div id="tariffPaymentInfo" style="display: none; margin: 12px 0; padding: 12px; background: #ff851a0d; border-radius: 8px;">
+    <div id="tariffPaymentInfo" style="display: none; margin: 12px 0; padding: 12px; background: rgba(157, 123, 255, 0.08); border-radius: 8px;">
       <strong>При покупке подписки:</strong><br>
       • Стоимость: <strong style="color: var(--primary);" id="tariffPrice">—</strong><br>
       • Период: <strong id="tariffPeriod">—</strong><br>
@@ -775,7 +953,7 @@
       <div class="ref-copy-notification" id="refCopyNotification">
         ✅ Ссылка скопирована!
       </div>
-      <div id="referralStats" style="margin-top: 12px; padding: 10px; background: #ff851a0d; border-radius: 6px; font-size: 13px;">
+      <div id="referralStats" style="margin-top: 12px; padding: 10px; background: rgba(157, 123, 255, 0.08); border-radius: 6px; font-size: 13px;">
         <strong>Ваша реферальная статистика:</strong><br>
         • Приглашено друзей: <strong id="referralCount">0</strong><br>
         • Всего получено: <strong id="totalBonusMoney">0</strong>₽
@@ -803,6 +981,8 @@
       <button class="button button-outline" onclick="closePaymentModal()" style="margin-top: 10px;">ОТМЕНА</button>
     </div>
   </div>
+  </div>
+  
 
   <script>
     // ==================== КОНФИГУРАЦИЯ ====================
@@ -822,10 +1002,9 @@
     let isInitialized = false;
 
     const tariffPlans = {
-      '1month': { id: '1month', name: '1 Месяц', price: 169, days: 30 },
-      '3months': { id: '3months', name: '3 Месяца', price: 399, days: 90 },
-      '6months': { id: '6months', name: '6 Месяцев', price: 699, days: 180 },
-      '1year': { id: '1year', name: '1 Год', price: 1199, days: 365 }
+      '1month': { id: '1month', name: '1 Месяц', price: 149, days: 30 },
+      '1year': { id: '1year', name: '1 Год', price: 1188, days: 365 },
+      'lifetime': { id: 'lifetime', name: 'Навсегда', price: 9999, days: 3650 } // ~10 лет
     };
 
     // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
@@ -995,7 +1174,7 @@
         document.getElementById('userName').textContent = userName;
       }
       if (document.getElementById('refLink')) {
-        document.getElementById('refLink').textContent = `https://t.me/ProzillaVPN_bot?start=ref_${userId}`;
+        document.getElementById('refLink').textContent = `https://t.me/nexxorvpn_bot?start=ref_${userId}`;
       }
     }
 
@@ -1142,7 +1321,7 @@
       // Показываем базовую информацию даже при ошибках
       const refLinkElement = document.getElementById('refLink');
       if (refLinkElement) {
-        refLinkElement.textContent = `https://t.me/ProzillaVPN_bot?start=ref_${userId}`;
+        refLinkElement.textContent = `https://t.me/nexxorvpn_bot?start=ref_${userId}`;
       }
       
       const referralCountElement = document.getElementById('referralCount');
@@ -1281,7 +1460,7 @@
 
     function showSupportChat() {
       // ИСПРАВЛЕНО: правильный формат ссылки для Telegram
-      const supportUrl = 'https://t.me/ProstyleLogo';
+      const supportUrl = 'https://t.me/mowedevelopment';
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.openTelegramLink(supportUrl);
       } else {
@@ -1942,7 +2121,7 @@
 
     function showHelp() {
       // ИСПРАВЛЕНО: кнопка помощи теперь открывает чат поддержки
-      const supportUrl = 'https://t.me/ProstyleLogo';
+      const supportUrl = 'https://t.me/mowedevelopment';
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.openTelegramLink(supportUrl);
       } else {

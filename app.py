@@ -31,8 +31,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="ProzillaVPN API",
-    description="Complete ProzillaVPN Service with API and Web Interface",
+    title="NexorVPN API",
+    description="Complete NexorVPN Service with API and Web Interface",
     version="1.0.0"
 )
 
@@ -117,23 +117,18 @@ VLESS_SERVERS = [
 TARIFFS = {
     "1month": {
         "name": "1 Месяц",
-        "price": 169.0,
+        "price": 149.0,
         "days": 30
-    },
-    "3months": {
-        "name": "3 Месяца",
-        "price": 399.0,
-        "days": 90
-    },
-    "6months": {
-        "name": "6 Месяцев",
-        "price": 699.0,
-        "days": 180
     },
     "1year": {
         "name": "1 Год",
-        "price": 1199.0,
+        "price": 1188.0,
         "days": 365
+    },
+    "lifetime": {
+        "name": "Навсегда",
+        "price": 9999.0,
+        "days": 3650
     }
 }
 
@@ -609,7 +604,7 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
             "port": port,
             "security": security,
             "type": "tcp",
-            "remark": f"ProzillaVPN - {user_id} - {server['name']}",
+            "remark": f"NexorVPN - {user_id} - {server['name']}",
             "user_id": user_id,
             "server_id": server["id"]
         }
@@ -932,7 +927,7 @@ def get_referral_link(user_id: str) -> str:
 
 def generate_referral_link(user_id: str) -> str:
     """Генерирует реферальную ссылку для пользователя"""
-    return f"https://t.me/ProzillaVPN_bot?start=ref_{user_id}"
+    return f"https://t.me/NexorVPN_bot?start=ref_{user_id}"
 
 # Функция для запуска бота в отдельном процессе
 def run_bot():
@@ -946,7 +941,7 @@ def run_bot():
 @app.on_event("startup")
 async def startup_event():
     """Действия при запуске приложения"""
-    logger.info("🚀 ProzillaVPN Server starting up...")
+    logger.info("🚀 NexorVPN Server starting up...")
     
     ensure_logo_exists()
     start_subscription_checker()
@@ -965,7 +960,7 @@ async def root():
     
     xray_users_count = await get_xray_users_count()
     return {
-        "message": "ProzillaVPN API is running", 
+        "message": "NexorVPN API is running", 
         "status": "ok",
         "firebase": "connected" if db else "disconnected",
         "xray_users": xray_users_count,
@@ -980,7 +975,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "service": "ProzillaVPN API",
+        "service": "NexorVPN API",
         "firebase": "connected" if db else "disconnected",
         "xray_users": xray_users_count,
         "available_servers": [server["name"] for server in VLESS_SERVERS],
@@ -1230,9 +1225,9 @@ async def add_balance(request: AddBalanceRequest):
             
             yookassa_data = {
                 "amount": {"value": f"{request.amount:.2f}", "currency": "RUB"},
-                "confirmation": {"type": "redirect", "return_url": "https://t.me/ProzillaVPN_bot"},
+                "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
                 "capture": True,
-                "description": f"Пополнение баланса ProzillaVPN на {request.amount}₽",
+                "description": f"Пополнение баланса NexorVPN на {request.amount}₽",
                 "metadata": {
                     "payment_id": payment_id,
                     "user_id": request.user_id,
@@ -1342,9 +1337,9 @@ async def activate_tariff(request: ActivateTariffRequest):
             
             yookassa_data = {
                 "amount": {"value": f"{tariff_price:.2f}", "currency": "RUB"},
-                "confirmation": {"type": "redirect", "return_url": "https://t.me/ProzillaVPN_bot"},
+                "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
                 "capture": True,
-                "description": f"Покупка подписки {tariff_data['name']} - ProzillaVPN (Сервер: {selected_server})",
+                "description": f"Покупка подписки {tariff_data['name']} - NexorVPN (Сервер: {selected_server})",
                 "metadata": {
                     "payment_id": payment_id,
                     "user_id": request.user_id,

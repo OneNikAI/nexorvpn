@@ -32,9 +32,9 @@ if not TOKEN:
     logger.error("❌ CRITICAL: TOKEN environment variable is missing!")
     sys.exit(1)
 
-SUPPORT_NICK = os.getenv("SUPPORT_NICK", "@ProstyleLogo")
-TG_CHANNEL = os.getenv("TG_CHANNEL", "@prozillavpn")
-BOT_USERNAME = os.getenv("BOT_USERNAME", "ProstyleLogo")
+SUPPORT_NICK = os.getenv("SUPPORT_NICK", "@mowedevelopment")
+TG_CHANNEL = os.getenv("TG_CHANNEL", "@nexxorvpn")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "nexxorvpn_bot")
 
 # Лучше использовать отдельный URL, если есть
 APP_BASE_URL = os.getenv("APP_BASE_URL")
@@ -207,7 +207,7 @@ def get_vless_keyboard():
 
 def get_welcome_message(user_name: str, is_referral: bool = False):
     message = f"""
-<b>Добро пожаловать в ProzillaVPN, {user_name}!</b>
+<b>Добро пожаловать в NexorVPN, {user_name}!</b>
 
 🚀 Получите безопасный и быстрый доступ к интернету с нашей VPN-службой.
 
@@ -232,7 +232,7 @@ async def get_cabinet_message(user_id: int):
 
     if user_data.get("error"):
         return f"""
-<b>Личный кабинет ProzillaVPN</b>
+<b>Личный кабинет NexorVPN</b>
 
 ❌ Ошибка загрузки данных: {user_data['error']}
 
@@ -251,7 +251,7 @@ async def get_cabinet_message(user_id: int):
     total_bonus_money = referral_stats.get("total_bonus_money", 0)
 
     return f"""
-<b>Личный кабинет ProzillaVPN</b>
+<b>Личный кабинет NexorVPN</b>
 
 💰 Баланс: <b>{balance}₽</b>
 📅 Статус подписки: <b>{status_text}</b>
@@ -267,7 +267,7 @@ async def get_cabinet_message(user_id: int):
 
 def get_ref_message(user_id: int):
     return f"""
-<b>Реферальная программа ProzillaVPN</b>
+<b>Реферальная программа NexorVPN</b>
 
 Пригласите друга по вашей ссылке:
 <code>https://t.me/{BOT_USERNAME}?start=ref_{user_id}</code>
@@ -283,7 +283,7 @@ def get_ref_message(user_id: int):
 
 def get_support_message():
     return f"""
-<b>Техническая поддержка ProzillaVPN</b>
+<b>Техническая поддержка NexorVPN</b>
 
 Если у вас возникли вопросы или проблемы:
 
@@ -456,7 +456,7 @@ async def web_app_handler(message: types.Message):
         )
     )
     await message.answer(
-        "🌐 <b>Веб-кабинет ProzillaVPN</b>\n\nДля покупки подписки и управления аккаунтом откройте веб-кабинет:",
+        "🌐 <b>Веб-кабинет NexorVPN</b>\n\nДля покупки подписки и управления аккаунтом откройте веб-кабинет:",
         reply_markup=builder.as_markup(),
         link_preview_options=no_preview()
     )
@@ -512,14 +512,14 @@ async def test_api(message: types.Message):
 async def back_to_menu_handler(callback: types.CallbackQuery):
     try:
         await callback.message.edit_text(
-            "Главное меню ProzillaVPN",
+            "Главное меню NexorVPN",
             reply_markup=None
         )
     except Exception:
         pass
 
     await callback.message.answer(
-        "Главное меню ProzillaVPN",
+        "Главное меню NexorVPN",
         reply_markup=get_main_keyboard(),
         link_preview_options=no_preview()
     )
@@ -593,7 +593,7 @@ async def refresh_vless_handler(callback: types.CallbackQuery):
 
 async def run_bot():
     logger.info("🔄 BOT VERSION 2.1 - RAILWAY SAFE")
-    logger.info("🤖 Бот ProzillaVPN запускается...")
+    logger.info("🤖 Бот NexorVPN запускается...")
     logger.info(f"🌐 API сервер: {API_BASE_URL}")
     logger.info(f"🌐 Веб-приложение: {WEB_APP_URL}")
 
