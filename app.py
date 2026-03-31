@@ -1223,11 +1223,47 @@ async def add_balance(request: AddBalanceRequest):
             payment_id = str(uuid.uuid4())
             save_payment(payment_id, request.user_id, request.amount, "balance", "balance", "yookassa")
             
+            # yookassa_data = {
+            #     "amount": {"value": f"{request.amount:.2f}", "currency": "RUB"},
+            #     "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
+            #     "capture": True,
+            #     "description": f"Пополнение баланса NexorVPN на {request.amount}₽",
+            #     "metadata": {
+            #         "payment_id": payment_id,
+            #         "user_id": request.user_id,
+            #         "payment_type": "balance",
+            #         "amount": request.amount
+            #     }
+            # }
+
             yookassa_data = {
                 "amount": {"value": f"{request.amount:.2f}", "currency": "RUB"},
-                "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
+                "confirmation": {
+                    "type": "redirect",
+                    "return_url": "https://t.me/nexxorvpn_bot"
+                },
                 "capture": True,
                 "description": f"Пополнение баланса NexorVPN на {request.amount}₽",
+
+                "receipt": {
+                    "customer": {
+                        "email": f"user{request.user_id}@gmail.com"
+                    },
+                    "items": [
+                        {
+                            "description": "Пополнение баланса",
+                            "quantity": "1.00",
+                            "amount": {
+                                "value": f"{request.amount:.2f}",
+                                "currency": "RUB"
+                            },
+                            "vat_code": 1,
+                            "payment_subject": "service",
+                            "payment_mode": "full_payment"
+                        }
+                    ]
+                },
+
                 "metadata": {
                     "payment_id": payment_id,
                     "user_id": request.user_id,
@@ -1335,11 +1371,49 @@ async def activate_tariff(request: ActivateTariffRequest):
             payment_id = str(uuid.uuid4())
             save_payment(payment_id, request.user_id, tariff_price, request.tariff, "tariff", "yookassa", selected_server)
             
+            # yookassa_data = {
+            #     "amount": {"value": f"{tariff_price:.2f}", "currency": "RUB"},
+            #     "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
+            #     "capture": True,
+            #     "description": f"Покупка подписки {tariff_data['name']} - NexorVPN (Сервер: {selected_server})",
+            #     "metadata": {
+            #         "payment_id": payment_id,
+            #         "user_id": request.user_id,
+            #         "tariff": request.tariff,
+            #         "payment_type": "tariff",
+            #         "tariff_days": tariff_days,
+            #         "selected_server": selected_server
+            #     }
+            # }
+
             yookassa_data = {
                 "amount": {"value": f"{tariff_price:.2f}", "currency": "RUB"},
-                "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
+                "confirmation": {
+                    "type": "redirect",
+                    "return_url": "https://t.me/nexxorvpn_bot"
+                },
                 "capture": True,
-                "description": f"Покупка подписки {tariff_data['name']} - NexorVPN (Сервер: {selected_server})",
+                "description": f"Подписка {tariff_data['name']} NexorVPN",
+
+                "receipt": {
+                    "customer": {
+                        "email": f"user{request.user_id}@gmail.com"
+                    },
+                    "items": [
+                        {
+                            "description": f"VPN подписка {tariff_data['name']}",
+                            "quantity": "1.00",
+                            "amount": {
+                                "value": f"{tariff_price:.2f}",
+                                "currency": "RUB"
+                            },
+                            "vat_code": 1,
+                            "payment_subject": "service",
+                            "payment_mode": "full_payment"
+                        }
+                    ]
+                },
+
                 "metadata": {
                     "payment_id": payment_id,
                     "user_id": request.user_id,
