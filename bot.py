@@ -612,6 +612,13 @@ async def create_payment(callback: types.CallbackQuery):
         types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{tariff_key}")
     )
 
+    builder.row(
+    types.InlineKeyboardButton(
+        text="🔄 Проверить оплату",
+        callback_data=f"check_{tariff_key}"
+    )
+)
+
     await callback.message.edit_text(
         f"""
 💳 <b>Оплата готова</b>
@@ -626,6 +633,8 @@ async def create_payment(callback: types.CallbackQuery):
     )
 
     await callback.answer()
+    await asyncio.sleep(5)
+    await check_payment(callback)
 
 @dp.message(F.text == "🔐 Личный кабинет")
 async def cabinet_handler(message: types.Message):
@@ -787,32 +796,81 @@ async def check_payment(callback: types.CallbackQuery):
 
     last = PAYMENT_LOCK.get(lock_key)
     if last and now - last < PAYMENT_TTL:
-        await callback.answer("⏳ Уже проверяем оплату", show_alert=False)
+        await callback.answer("⏳ Уже проверяем оплату...", show_alert=False)
         return
 
     PAYMENT_LOCK[lock_key] = now
 
     try:
+        # 💡 UX: пользователь понимает что идет проверка
         await callback.message.edit_text("⏳ Проверяем оплату...")
 
+        # 🔍 1. проверяем оплату
         result = await make_api_request(
             "/check-payment",
             method="POST",
             json_data={
-                "user_id": callback.from_user.id,
+                "user_id": str(user_id),
                 "tariff": tariff_key
             }
         )
 
-        if result.get("paid"):
+        if result.get("error"):
             await callback.message.edit_text(
-                "✅ <b>Оплата подтверждена!</b>\n\n🚀 Подписка активирована"
+                f"❌ Ошибка проверки оплаты:\n{result['error']}"
             )
-        else:
+            return
+
+        # ❌ НЕ ОПЛАЧЕНО
+        if not result.get("paid"):
             await callback.message.edit_text(
                 "❌ <b>Оплата не найдена</b>\n\n"
-                "Подождите 1–2 минуты или нажмите «🔄 Обновить»"
+                "Подождите 1–2 минуты и нажмите «🔄 Проверить оплату»"
             )
+            return
+
+        # 🚀 2. АКТИВАЦИЯ ПОДПИСКИ + ВЫДАЧА КЛЮЧА
+        activate = await make_api_request(
+            "/activate-subscription",
+            method="POST",
+            json_data={
+                "user_id": str(user_id),
+                "tariff": tariff_key
+            }
+        )
+
+        if activate.get("error"):
+            await callback.message.edit_text(
+                f"❌ Ошибка активации:\n{activate['error']}"
+            )
+            return
+
+        vless_key = activate.get("vless_key", "не найден")
+        days = activate.get("days", 0)
+
+        # 🎉 FINAL UX (уровень NordVPN)
+        await callback.message.edit_text(
+            f"""
+🎉 <b>Оплата подтверждена!</b>
+
+🚀 <b>Подписка активирована</b>
+
+📦 Тариф: <b>{tariff_key}</b>
+📅 Дней доступа: <b>{days}</b>
+
+🔐 <b>Ваш VPN ключ:</b>
+<code>{vless_key}</code>
+
+📱 Скопируйте и вставьте в приложение
+⚡ Доступ активирован автоматически
+            """
+        )
+
+    except Exception as e:
+        logger.exception("check_payment error")
+        await callback.message.edit_text(
+            f"❌ Критическая ошибка:\n{str(e)}"
+        )
 
     finally:
         PAYMENT_LOCK.pop(lock_key, None)
@@ -840,6 +898,44 @@ async def refresh_vless_handler(callback: types.CallbackQuery):
         )
 
     await callback.answer("✅ Конфигурация обновлена")
+
+async def process_payment_check(user_id: int, tariff_key: str, message: types.Message):
+    result = await make_api_request(
+        "/check-payment",
+        method="POST",
+        json_data={
+            "user_id": str(user_id),
+            "tariff": tariff_key
+        }
+    )
+
+    if not result.get("paid"):
+        await message.answer("❌ Оплата не найдена. Попробуйте позже.")
+        return
+
+    activate = await make_api_request(
+        "/activate-subscription",
+        method="POST",
+        json_data={
+            "user_id": str(user_id),
+            "tariff": tariff_key
+        }
+    )
+
+    if activate.get("error"):
+        await message.answer(f"❌ Ошибка: {activate['error']}")
+        return
+
+    await message.answer(
+        f"""
+🎉 <b>Оплата подтверждена!</b>
+
+🚀 Подписка активирована
+
+🔐 Ключ:
+<code>{activate.get('vless_key')}</code>
+        """
+    )
 
 async def run_bot():
     logger.info("🔄 BOT VERSION 2.1 - RAILWAY SAFE + HARDENED")
