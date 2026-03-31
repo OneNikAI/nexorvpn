@@ -847,9 +847,13 @@ async def run_bot():
     logger.info("🤖 Бот NexorVPN запускается...")
     logger.info(f"🌐 API сервер: {API_BASE_URL}")
     logger.info(f"🌐 Веб-приложение: {WEB_APP_URL}")
+    logger.info("🚀 START POLLING ENTERED")
 
     try:
         await dp.start_polling(bot)
+    except Exception as e:
+        logger.exception("💥 POLLING CRASHED")
+        raise
     finally:
         await shutdown()
 
@@ -875,6 +879,11 @@ async def shutdown():
 
 
 async def main():
-    loop = asyncio.get_running_loop()
-
+    logger.info("🚀 MAIN STARTED")
     await run_bot()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("🛑 Бот остановлен")
