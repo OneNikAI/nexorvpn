@@ -181,7 +181,8 @@ def clean_tg_username(value: str) -> str:
 def get_main_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.row(
-        types.KeyboardButton(text="💳 Купить подписку")
+        types.KeyboardButton(text="💳 Купить подписку"),
+        types.KeyboardButton(text="🌐 Веб-кабинет")
     )
     builder.row(
         types.KeyboardButton(text="🔐 Личный кабинет"),
@@ -189,11 +190,9 @@ def get_main_keyboard():
     )
     builder.row(
         types.KeyboardButton(text="🛠️ Техподдержка"),
-        types.KeyboardButton(text="🌐 Веб-кабинет")
-    )
-    builder.row(
         types.KeyboardButton(text="🔧 VLESS Конфиг")
     )
+    
     return builder.as_markup(resize_keyboard=True)
 
 
