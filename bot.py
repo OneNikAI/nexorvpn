@@ -603,19 +603,25 @@ async def create_payment(callback: types.CallbackQuery):
         await callback.message.answer("❌ Ошибка оплаты (нет ссылки)")
         return
 
+    payment_id = result.get("payment_id")
+
     builder = InlineKeyboardBuilder()
 
     builder.row(
         types.InlineKeyboardButton(text="💳 Оплатить", url=payment_url)
     )
+
     builder.row(
-        types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{tariff_key}")
+        types.InlineKeyboardButton(
+            text="✅ Я оплатил",
+            callback_data=f"check_{payment_id}"
+        )
     )
 
     builder.row(
     types.InlineKeyboardButton(
         text="🔄 Проверить оплату",
-        callback_data=f"check_{tariff_key}"
+        callback_data=f"check_{payment_id}"
     )
 )
 
@@ -633,8 +639,6 @@ async def create_payment(callback: types.CallbackQuery):
     )
 
     await callback.answer()
-    await asyncio.sleep(5)
-    await check_payment(callback)
 
 @dp.message(F.text == "🔐 Личный кабинет")
 async def cabinet_handler(message: types.Message):
@@ -789,94 +793,66 @@ async def refresh_refs_handler(callback: types.CallbackQuery):
 @dp.callback_query(F.data.startswith("check_"))
 async def check_payment(callback: types.CallbackQuery):
     user_id = callback.from_user.id
-    tariff_key = callback.data.replace("check_", "")
+    payment_id = callback.data.replace("check_", "")
 
-    lock_key = f"{user_id}:{tariff_key}"
-    now = time.time()
-
-    last = PAYMENT_LOCK.get(lock_key)
-    if last and now - last < PAYMENT_TTL:
-        await callback.answer("⏳ Уже проверяем оплату...", show_alert=False)
+    if not payment_id or len(payment_id) < 10:
+        await callback.message.edit_text("❌ Ошибка: неверный payment_id")
         return
 
-    PAYMENT_LOCK[lock_key] = now
+    await callback.message.edit_text("⏳ Проверяем оплату...")
 
-    try:
-        # 💡 UX: пользователь понимает что идет проверка
-        await callback.message.edit_text("⏳ Проверяем оплату...")
+    result = await make_api_request(
+        "/check-payment",
+        method="GET",
+        params={
+            "payment_id": payment_id,
+            "user_id": str(user_id)
+        }
+    )
 
-        # 🔍 1. проверяем оплату
-        result = await make_api_request(
-            "/activate-tariff",
-            method="POST",
-            json_data={
-                "user_id": str(user_id),
-                "tariff": tariff_key
-            }
-        )
-
-        if result.get("error"):
-            await callback.message.edit_text(
-                f"❌ Ошибка проверки оплаты:\n{result['error']}"
-            )
-            return
-
-        # ❌ НЕ ОПЛАЧЕНО
-        if not result.get("paid"):
-            await callback.message.edit_text(
-                "❌ <b>Оплата не найдена</b>\n\n"
-                "Подождите 1–2 минуты и нажмите «🔄 Проверить оплату»"
-            )
-            return
-
-        # 🚀 2. АКТИВАЦИЯ ПОДПИСКИ + ВЫДАЧА КЛЮЧА
-        activate = await make_api_request(
-            "/activate-subscription",
-            method="POST",
-            json_data={
-                "user_id": str(user_id),
-                "tariff": tariff_key
-            }
-        )
-
-        if activate.get("error"):
-            await callback.message.edit_text(
-                f"❌ Ошибка активации:\n{activate['error']}"
-            )
-            return
-
-        vless_key = activate.get("vless_key", "не найден")
-        days = activate.get("days", 0)
-
-        # 🎉 FINAL UX (уровень NordVPN)
+    if result.get("error"):
         await callback.message.edit_text(
-            f"""
-🎉 <b>Оплата подтверждена!</b>
+            f"❌ Ошибка:\n{result['error']}"
+        )
+        return
 
-🚀 <b>Подписка активирована</b>
+    status = result.get("status")
 
-📦 Тариф: <b>{tariff_key}</b>
-📅 Дней доступа: <b>{days}</b>
+    if status != "succeeded":
+        await callback.message.edit_text(
+            "❌ <b>Оплата ещё не прошла</b>\n\n"
+            "Подождите 10–30 секунд и нажмите ещё раз"
+        )
+        return
+
+    # ✅ ОПЛАТА ПРОШЛА → ПОЛУЧАЕМ КОНФИГ
+    vless = await get_vless_config(user_id)
+
+    if not vless.get("success"):
+        await callback.message.edit_text(
+            "⚠️ Оплата прошла, но конфиг ещё не готов. Попробуйте через 5 секунд."
+        )
+        return
+
+    configs = vless.get("configs", [])
+    first = configs[0] if configs else {}
+
+    vless_link = first.get("vless_link", "не найден")
+
+    await callback.message.edit_text(
+        f"""
+🎉 <b>Оплата прошла!</b>
+
+🚀 Подписка активирована
 
 🔐 <b>Ваш VPN ключ:</b>
-<code>{vless_key}</code>
+<code>{vless_link}</code>
 
 📱 Скопируйте и вставьте в приложение
-⚡ Доступ активирован автоматически
-            """
-        )
-
-    except Exception as e:
-        logger.exception("check_payment error")
-        await callback.message.edit_text(
-            f"❌ Критическая ошибка:\n{str(e)}"
-        )
-
-    finally:
-        PAYMENT_LOCK.pop(lock_key, None)
+        """
+    )
 
     await callback.answer()
-
 
 @dp.callback_query(F.data == "refresh_vless")
 async def refresh_vless_handler(callback: types.CallbackQuery):
@@ -901,7 +877,7 @@ async def refresh_vless_handler(callback: types.CallbackQuery):
 
 async def process_payment_check(user_id: int, tariff_key: str, message: types.Message):
     result = await make_api_request(
-        "/activate-tariff",
+        "/check-payment",
         method="POST",
         json_data={
             "user_id": str(user_id),

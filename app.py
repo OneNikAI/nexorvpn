@@ -24,6 +24,22 @@ import io
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
+def get_payment_by_id(payment_id: str):
+    try:
+        if not db:
+            return None
+
+        doc = db.collection("payments").document(payment_id).get()
+
+        if doc.exists:
+            return doc.to_dict()
+
+        return None
+
+    except Exception as e:
+        logger.error(f"❌ Firestore error: {e}")
+        return None
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -1666,6 +1682,80 @@ async def get_vless_config(user_id: str, server_id: str = None):
     except Exception as e:
         logger.error(f"❌ Error getting VLESS config: {e}")
         return JSONResponse(status_code=500, content={"error": f"Error getting VLESS config: {str(e)}"})
+    
+@app.post("/check-payment")
+async def check_payment(data: dict):
+    try:
+        user_id = data.get("user_id")
+        tariff = data.get("tariff")
+
+        if not user_id or not tariff:
+            return {"paid": False}
+
+        # 👉 тут ты должен найти платеж в базе
+        # ВРЕМЕННО сделаем заглушку:
+
+        payment = get_last_payment(user_id, tariff)  # 👈 если есть функция
+
+        if not payment:
+            return {"paid": False}
+
+        if payment.get("status") != "succeeded":
+            return {"paid": False}
+
+        return {"paid": True}
+
+    except Exception as e:
+        logger.error(f"❌ check_payment error: {e}")
+        return {"paid": False}
+    
+@app.get("/check-payment")
+async def check_payment(payment_id: str, user_id: str):
+    try:
+        if not payment_id:
+            return {"status": "pending"}
+
+        # 👉 ищем платеж по payment_id
+        payment = get_payment_by_id(payment_id)  # СДЕЛАЙ ЭТУ ФУНКЦИЮ
+
+        if not payment:
+            return {"status": "pending"}
+
+        return {
+            "status": payment.get("status", "pending")
+        }
+
+    except Exception as e:
+        logger.error(f"❌ check_payment error: {e}")
+        return {"status": "error"}
+
+@app.post("/yookassa-webhook")
+async def yookassa_webhook(request: Request):
+    try:
+        data = await request.json()
+
+        event = data.get("event")
+        payment = data.get("object", {})
+
+        payment_id = payment.get("metadata", {}).get("payment_id")
+        yookassa_id = payment.get("id")
+
+        if not payment_id:
+            return {"ok": True}
+
+        # 🔥 УСПЕШНАЯ ОПЛАТА
+        if event == "payment.succeeded":
+            update_payment_status(payment_id, "succeeded", yookassa_id)
+
+        # ❌ ОТМЕНА
+        elif event == "payment.canceled":
+            update_payment_status(payment_id, "canceled", yookassa_id)
+
+        return {"ok": True}
+
+    except Exception as e:
+        logger.error(f"❌ Webhook error: {e}")
+        return {"ok": False}
 
 @app.post("/save-vless-key")
 async def save_vless_key(request: SaveVlessKeyRequest):
