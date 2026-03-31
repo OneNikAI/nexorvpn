@@ -192,7 +192,7 @@ def get_main_keyboard():
         types.KeyboardButton(text="🛠️ Техподдержка"),
         types.KeyboardButton(text="🔧 VLESS Конфиг")
     )
-    
+
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -587,9 +587,9 @@ async def create_payment(callback: types.CallbackQuery):
         "/activate-tariff",
         method="POST",
         json_data={
-            "user_id": user_id,
-            "tariff": tariff_key,
-            "price": tariff["price"]
+            "user_id": str(user_id),
+            "tariff": tariff_key
+            # "price": tariff["price"]
         }
     )
 
