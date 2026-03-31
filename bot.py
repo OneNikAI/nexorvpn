@@ -436,6 +436,9 @@ async def cmd_start(message: types.Message):
             link_preview_options=no_preview()
         )
 
+    finally:
+        START_LOCK.pop(user_id, None)
+
 
 @dp.message(Command("cabinet"))
 async def cmd_cabinet(message: types.Message):
