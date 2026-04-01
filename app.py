@@ -586,7 +586,7 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
         if security == "reality":
             clean_sni = sni.replace(":443", "") if sni else ""
             vless_link = (
-                f"vless://{uuid_str}@{server_ip}:{port}"
+                f"vless://{vless_uuid}@{address}:{port}?"
                 f"?type=tcp"
                 f"&security=reality"
                 f"&pbk={reality_pbk}&"
