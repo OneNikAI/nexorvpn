@@ -581,15 +581,15 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
         if security == "reality":
             clean_sni = sni.replace(":443", "") if sni else ""
             vless_link = (
-                f"vless://{vless_uuid}@{address}:{port}?"
+                f"vless://{vless_uuid}@{address}:{port}"
                 f"?type=tcp"
                 f"&security=reality"
-                f"&pbk={reality_pbk}&"
+                f"&pbk={reality_pbk}"
                 f"&fp=chrome"
-                f"&sni={clean_sni}&"
+                f"&sni={clean_sni}"
                 f"&sid={short_id}"
                 f"&spx=%2F"
-                f"&flow={flow}"
+                f"&flow="
                 f"&encryption=none"
                 f"#Nexor-VPN-{user_id}-{server['id']}"
             )
