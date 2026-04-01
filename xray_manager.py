@@ -10,11 +10,7 @@ logger = logging.getLogger(__name__)
 class XrayManager:
     def __init__(self):
         self.api_url = os.getenv("XRAY_API_URL", "http://72.56.22.233:8002")
-        self.api_key = os.getenv("XRAY_API_KEY")
-
-        # 🔥 ДОБАВИТЬ ВОТ ЭТО (для проверки)
-        logger.info(f"🌐 API URL: {self.api_url}")
-        logger.info(f"🔑 API KEY: {self.api_key[:10] if self.api_key else 'MISSING'}...")
+        self.api_key = os.getenv("XRAY_API_KEY", "daf9f2b078551349b17d039c3be16203dd04f0289ef24f08132f46a3826a4f38")
 
     async def add_user(self, email: str, uuid_str: str = None):
         try:
