@@ -430,7 +430,10 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
             servers_to_add = [server_id] if server_id else list(XRAY_SERVERS.keys())
             
             # Запускаем добавление асинхронно без ожидания
-            asyncio.create_task(fast_add_to_xray(vless_uuid, servers_to_add))
+            email = user_data.get("email", user_id)
+
+            # СРАЗУ добавляем в Xray (без create_task)
+            await fast_add_to_xray(vless_uuid, email, servers_to_add)
             
             return vless_uuid
         
@@ -446,7 +449,6 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
         
         # Быстро добавляем на серверы
         servers_to_add = [server_id] if server_id else list(XRAY_SERVERS.keys())
-        asyncio.create_task(fast_add_to_xray(new_uuid, servers_to_add))
         
         return new_uuid
         
@@ -454,33 +456,71 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
         logger.error(f"❌ Error ensuring user UUID: {e}")
         raise
 
-async def fast_add_to_xray(user_uuid: str, email: str, servers_to_add):
-    """Быстрое добавление в Xray без блокировки основного потока"""
-    try:
-        for server_name in servers_to_add:
-            if server_name in XRAY_SERVERS:
-                try:
-                    async with httpx.AsyncClient() as client:
-                        await client.post(
-                            f"{XRAY_SERVERS[server_name]['url']}/add-user",
-                            headers={
-                                "Authorization": f"Bearer {XRAY_SERVERS[server_name]['api_key']}",
-                                "Content-Type": "application/json"
-                            },
-                            json={
-                                "email": email,
-                                "uuid": user_uuid
-                            },
-                            timeout=5.0
-                        )
+async def fast_add_to_xray(user_uuid: str, email: str, servers_to_add: list):
+    """Надёжное добавление пользователя в Xray (без silent failure)"""
 
-                    logger.info(f"⚡ FAST: User {user_uuid} sent to {server_name}")
+    results = []
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+
+            for server_name in servers_to_add:
+
+                if server_name not in XRAY_SERVERS:
+                    logger.warning(f"Unknown server: {server_name}")
+                    continue
+
+                url = f"{XRAY_SERVERS[server_name]['url']}/add-user"
+
+                payload = {
+                    "email": email,
+                    "uuid": user_uuid
+                }
+
+                try:
+                    resp = await client.post(
+                        url,
+                        headers={
+                            "Authorization": f"Bearer {XRAY_SERVERS[server_name]['api_key']}",
+                            "Content-Type": "application/json"
+                        },
+                        json=payload
+                    )
+
+                    # 🔥 ВАЖНО: проверка ответа
+                    if resp.status_code != 200:
+                        logger.error(
+                            f"❌ Xray reject {server_name}: "
+                            f"{resp.status_code} {resp.text}"
+                        )
+                        results.append({
+                            "server": server_name,
+                            "success": False,
+                            "error": resp.text
+                        })
+                        continue
+
+                    results.append({
+                        "server": server_name,
+                        "success": True
+                    })
+
+                    logger.info(f"✅ Xray added user {user_uuid} -> {server_name}")
 
                 except Exception as e:
-                    logger.warning(f"⚠️ Fast add failed for {server_name}: {e}")
+                    logger.error(f"❌ Request failed for {server_name}: {e}")
+
+                    results.append({
+                        "server": server_name,
+                        "success": False,
+                        "error": str(e)
+                    })
 
     except Exception as e:
-        logger.error(f"❌ Error in fast_add_to_xray: {e}")
+        logger.error(f"❌ Fatal error in fast_add_to_xray: {e}")
+        raise  # 🔥 ВАЖНО: не глотаем фатальные ошибки
+
+    return results
 
 def add_referral_bonus_immediately(referrer_id: str, referred_id: str):
     if not db: 
@@ -572,22 +612,22 @@ def update_vless_key_status(user_id: str, server_id: str, is_active: bool):
         return False
 
 def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = None) -> List[dict]:
-    """Создает VLESS конфигурации для пользователя и сохраняет в БД"""
-    
+    """Создает VLESS конфигурации для пользователя"""
+
     configs = []
     servers_to_process = []
-    
+
+    # 1. выбираем серверы
     if server_id:
-        for server in VLESS_SERVERS:
-            if server["id"] == server_id:
-                servers_to_process = [server]
-                break
+        servers_to_process = [s for s in VLESS_SERVERS if s["id"] == server_id]
         if not servers_to_process:
             servers_to_process = VLESS_SERVERS
     else:
         servers_to_process = VLESS_SERVERS
-    
+
+    # 2. генерим конфиги (БЕЗ сохранения в БД!)
     for server in servers_to_process:
+
         address = server["address"]
         port = server["port"]
         security = server["security"]
@@ -595,13 +635,13 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
         reality_pbk = server.get("reality_pbk", "")
         short_id = server.get("short_id", "")
         flow = server.get("flow", "")
-        
+
         if security == "reality":
             clean_sni = sni.replace(":443", "") if sni else ""
+
             vless_link = (
                 f"vless://{vless_uuid}@{address}:{port}?"
-                f"type=tcp&"
-                f"security=reality&"
+                f"type=tcp&security=reality&"
                 f"pbk={reality_pbk}&"
                 f"fp=chrome&"
                 f"sni={clean_sni}&"
@@ -613,12 +653,10 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
         else:
             vless_link = (
                 f"vless://{vless_uuid}@{address}:{port}?"
-                f"encryption=none&"
-                f"type=tcp&"
-                f"security=none#"
+                f"encryption=none&type=tcp&security=none#"
                 f"Nexor-VPN-{user_id}-{server['id']}"
             )
-        
+
         config = {
             "name": f"{server['name']} - {user_id}",
             "protocol": "vless",
@@ -631,7 +669,7 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
             "user_id": user_id,
             "server_id": server["id"]
         }
-        
+
         if security == "reality":
             config.update({
                 "reality_pbk": reality_pbk,
@@ -644,9 +682,9 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
             config.update({
                 "encryption": "none"
             })
-        
+
         encoded_vless_link = urllib.parse.quote(vless_link)
-        
+
         config_data = {
             "vless_link": vless_link,
             "config": config,
@@ -654,11 +692,16 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
             "server_name": server["name"],
             "server_id": server["id"]
         }
-        
-        save_vless_key_to_db(user_id, server["id"], vless_link, config)
-        
+
         configs.append(config_data)
-    
+
+    # 3. 🔥 САМОЕ ВАЖНОЕ — сохраняем ОДИН РАЗ
+    save_vless_key_to_db(
+        user_id=user_id,
+        vless_uuid=vless_uuid,
+        configs=configs
+    )
+
     return configs
 
 def process_subscription_days(user_id: str) -> bool:
