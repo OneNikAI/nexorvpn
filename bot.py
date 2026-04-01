@@ -32,7 +32,7 @@ if not TOKEN:
     logger.error("❌ CRITICAL: TOKEN environment variable is missing!")
     sys.exit(1)
 
-SUPPORT_NICK = os.getenv("SUPPORT_NICK", "@mowedevelopment)
+SUPPORT_NICK = os.getenv("SUPPORT_NICK", "@mowedevelopment")
 TG_CHANNEL = os.getenv("TG_CHANNEL", "@nexxorvpn")
 BOT_USERNAME = os.getenv("BOT_USERNAME", "NexorVPN")
 
