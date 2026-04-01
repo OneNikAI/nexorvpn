@@ -56,7 +56,7 @@ XRAY_SERVERS = {
         "api_key": "daf9f2b078551349b17d039c3be16203dd04f0289ef24f08132f46a3826a4f38",
         "display_name": "Amsterdam",
         "api_url": "http://72.56.22.233:8002",
-        "reality_pbk": "0Mo9wqMaok4mUY1VClr3LCdLV-TPgStvokevS91z6nw",
+        "reality_pbk": "iD8DdcMv8KUDhdM6Khntu36PCfCMGm2XQOI3ma2JFhk",
         "ssh_host": "72.56.22.233"
     }
     # "London": {
@@ -84,7 +84,7 @@ VLESS_SERVERS = [
         "address": "72.56.22.233",
         "port": 2053,
         "sni": "www.google.com",
-        "reality_pbk": "0Mo9wqMaok4mUY1VClr3LCdLV-TPgStvokevS91z6nw",
+        "reality_pbk": "iD8DdcMv8KUDhdM6Khntu36PCfCMGm2XQOI3ma2JFhk",
         "short_id": "653913be",
         "flow": "xtls-rprx-vision",
         "security": "reality"
@@ -117,23 +117,18 @@ VLESS_SERVERS = [
 TARIFFS = {
     "1month": {
         "name": "1 Месяц",
-        "price": 169.0,
+        "price": 149.0,
         "days": 30
-    },
-    "3months": {
-        "name": "3 Месяца",
-        "price": 399.0,
-        "days": 90
-    },
-    "6months": {
-        "name": "6 Месяцев",
-        "price": 699.0,
-        "days": 180
     },
     "1year": {
         "name": "1 Год",
-        "price": 1199.0,
+        "price": 1188.0,
         "days": 365
+    },
+    "lifetime": {
+        "name": "Навсегда",
+        "price": 9999.0,
+        "days": 3650
     }
 }
 
