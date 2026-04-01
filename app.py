@@ -1327,47 +1327,77 @@ async def activate_tariff(request: ActivateTariffRequest):
     try:
         if not db:
             return JSONResponse(status_code=500, content={"error": "Database not connected"})
-            
+
         user = get_user(request.user_id)
         if not user:
             return JSONResponse(status_code=404, content={"error": "User not found"})
-        
+
         if request.tariff not in TARIFFS:
             return JSONResponse(status_code=400, content={"error": "Invalid tariff"})
-            
+
         tariff_data = TARIFFS[request.tariff]
         tariff_price = tariff_data["price"]
         tariff_days = tariff_data["days"]
-        
-        selected_server = request.selected_server or user.get('preferred_server') or "London"
-        
+
+        selected_server = request.selected_server or user.get("preferred_server") or "London"
+
+        payment_id = str(uuid.uuid4())
+
+        # =========================
+        # 💳 BALANCE PAYMENT FLOW
+        # =========================
         if request.payment_method == "balance":
-            user_balance = user.get('balance', 0.0)
-            
+
+            user_balance = user.get("balance", 0.0)
+
             if user_balance < tariff_price:
-                return JSONResponse(status_code=400, content={"error": f"Недостаточно средств на балансе. Необходимо: {tariff_price}₽, доступно: {user_balance}₽"})
-            
-            payment_id = str(uuid.uuid4())
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Недостаточно средств. Нужно: {tariff_price}₽, есть: {user_balance}₽"}
+                )
+
+            # save payment
             save_payment(payment_id, request.user_id, tariff_price, request.tariff, "tariff", "balance", selected_server)
-            
+
+            # deduct balance
             update_user_balance(request.user_id, -tariff_price)
-            
+
+            # activate subscription
             success = await update_subscription_days(request.user_id, tariff_days, selected_server)
-            
+
             if not success:
                 return JSONResponse(status_code=500, content={"error": "Ошибка активации подписки"})
-            
-            if user.get('referred_by'):
-                referrer_id = user['referred_by']
+
+            # =========================
+            # 🔑 CREATE VPN USER (ВАЖНО)
+            # =========================
+            try:
+                xray = XrayManager()
+                email = f"user_{request.user_id}"
+
+                success_xray, uuid = await xray.add_user(email=email)
+
+                if not success_xray:
+                    return JSONResponse(status_code=500, content={"error": "Failed to create VPN user"})
+
+                vless_link = generate_vless_key(uuid, email)
+
+            except Exception as e:
+                logger.error(f"Xray error: {e}")
+                return JSONResponse(status_code=500, content={"error": "VPN generation failed"})
+
+            # referral bonus
+            if user.get("referred_by"):
+                referrer_id = user["referred_by"]
                 referral_id = f"{referrer_id}_{request.user_id}"
-                
-                referral_exists = db.collection('referrals').document(referral_id).get().exists
-                
+
+                referral_exists = db.collection("referrals").document(referral_id).get().exists
+
                 if not referral_exists:
                     add_referral_bonus_immediately(referrer_id, request.user_id)
-            
+
             update_payment_status(payment_id, "succeeded")
-            
+
             return {
                 "success": True,
                 "payment_id": payment_id,
@@ -1375,33 +1405,22 @@ async def activate_tariff(request: ActivateTariffRequest):
                 "days": tariff_days,
                 "selected_server": selected_server,
                 "status": "succeeded",
-                "message": f"Подписка успешно активирована с баланса на сервере {selected_server}!"
+                "vless_link": vless_link,
+                "message": f"Подписка активирована + VPN создан на сервере {selected_server}"
             }
-        
+
+        # =========================
+        # 💳 YOOKASSA FLOW
+        # =========================
         elif request.payment_method == "yookassa":
+
             SHOP_ID = os.getenv("SHOP_ID")
             API_KEY = os.getenv("API_KEY")
-            
+
             if not SHOP_ID or not API_KEY:
                 return JSONResponse(status_code=500, content={"error": "Payment gateway not configured"})
-            
-            payment_id = str(uuid.uuid4())
+
             save_payment(payment_id, request.user_id, tariff_price, request.tariff, "tariff", "yookassa", selected_server)
-            
-            # yookassa_data = {
-            #     "amount": {"value": f"{tariff_price:.2f}", "currency": "RUB"},
-            #     "confirmation": {"type": "redirect", "return_url": "https://t.me/NexorVPN_bot"},
-            #     "capture": True,
-            #     "description": f"Покупка подписки {tariff_data['name']} - NexorVPN (Сервер: {selected_server})",
-            #     "metadata": {
-            #         "payment_id": payment_id,
-            #         "user_id": request.user_id,
-            #         "tariff": request.tariff,
-            #         "payment_type": "tariff",
-            #         "tariff_days": tariff_days,
-            #         "selected_server": selected_server
-            #     }
-            # }
 
             yookassa_data = {
                 "amount": {"value": f"{tariff_price:.2f}", "currency": "RUB"},
@@ -1440,7 +1459,7 @@ async def activate_tariff(request: ActivateTariffRequest):
                     "selected_server": selected_server
                 }
             }
-            
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "https://api.yookassa.ru/v3/payments",
@@ -1452,27 +1471,26 @@ async def activate_tariff(request: ActivateTariffRequest):
                     json=yookassa_data,
                     timeout=30.0
                 )
-            
-            if response.status_code in [200, 201]:
-                payment_data = response.json()
-                update_payment_status(payment_id, "pending", payment_data.get("id"))
-                
-                return {
-                    "success": True,
-                    "payment_id": payment_id,
-                    "payment_url": payment_data["confirmation"]["confirmation_url"],
-                    "amount": tariff_price,
-                    "days": tariff_days,
-                    "selected_server": selected_server,
-                    "status": "pending",
-                    "message": f"Перейдите по ссылке для оплаты подписки на сервере {selected_server}"
-                }
-            else:
+
+            if response.status_code not in [200, 201]:
                 return JSONResponse(status_code=500, content={"error": f"Payment gateway error: {response.status_code}"})
-        
+
+            payment_data = response.json()
+            update_payment_status(payment_id, "pending", payment_data.get("id"))
+
+            return {
+                "success": True,
+                "payment_id": payment_id,
+                "payment_url": payment_data["confirmation"]["confirmation_url"],
+                "amount": tariff_price,
+                "days": tariff_days,
+                "selected_server": selected_server,
+                "status": "pending"
+            }
+
         else:
             return JSONResponse(status_code=400, content={"error": "Invalid payment method"})
-        
+
     except Exception as e:
         logger.error(f"❌ Error activating tariff: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
