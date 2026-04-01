@@ -601,7 +601,7 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
                 f"sni={clean_sni}&"
                 f"sid={short_id}#"
                 f"spx=%2F&"
-                f"encryption=none"
+                f"encryption=none#"
                 f"Nexor-VPN-{user_id}-{server['id']}"
             )
         else:
