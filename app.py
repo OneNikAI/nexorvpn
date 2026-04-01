@@ -454,7 +454,7 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
         logger.error(f"❌ Error ensuring user UUID: {e}")
         raise
 
-async def fast_add_to_xray(user_uuid: str, servers_to_add):
+async def fast_add_to_xray(user_uuid: str, email: str, servers_to_add):
     """Быстрое добавление в Xray без блокировки основного потока"""
     try:
         for server_name in servers_to_add:
@@ -462,17 +462,23 @@ async def fast_add_to_xray(user_uuid: str, servers_to_add):
                 try:
                     async with httpx.AsyncClient() as client:
                         await client.post(
-                            f"{XRAY_SERVERS[server_name]['url']}/user",
+                            f"{XRAY_SERVERS[server_name]['url']}/add-user",
                             headers={
-                                "X-API-Key": XRAY_SERVERS[server_name]["api_key"],
+                                "Authorization": f"Bearer {XRAY_SERVERS[server_name]['api_key']}",
                                 "Content-Type": "application/json"
                             },
-                            json={"uuid": user_uuid},
+                            json={
+                                "email": email,
+                                "uuid": user_uuid
+                            },
                             timeout=5.0
                         )
+
                     logger.info(f"⚡ FAST: User {user_uuid} sent to {server_name}")
+
                 except Exception as e:
                     logger.warning(f"⚠️ Fast add failed for {server_name}: {e}")
+
     except Exception as e:
         logger.error(f"❌ Error in fast_add_to_xray: {e}")
 
