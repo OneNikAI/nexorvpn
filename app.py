@@ -72,7 +72,7 @@ XRAY_SERVERS = {
         "api_key": "daf9f2b078551349b17d039c3be16203dd04f0289ef24f08132f46a3826a4f38",
         "display_name": "Amsterdam",
         "api_url": "http://72.56.22.233:8002",
-        "reality_pbk": "0Mo9wqMaok4mUY1VClr3LCdLV-TPgStvokevS91z6nw",
+        "reality_pbk": "iD8DdcMv8KUDhdM6Khntu36PCfCMGm2XQOI3ma2JFhk",
         "ssh_host": "72.56.22.233"
     }
     # "London": {
@@ -100,9 +100,9 @@ VLESS_SERVERS = [
         "address": "72.56.22.233",
         "port": 2053,
         "sni": "www.google.com",
-        "reality_pbk": "0Mo9wqMaok4mUY1VClr3LCdLV-TPgStvokevS91z6nw",
+        "reality_pbk": "iD8DdcMv8KUDhdM6Khntu36PCfCMGm2XQOI3ma2JFhk",
         "short_id": "653913be",
-        "flow": "xtls-rprx-vision",
+        "flow": "",
         "security": "reality"
     }
     # {
@@ -596,11 +596,12 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
                 f"vless://{vless_uuid}@{address}:{port}?"
                 f"type=tcp&"
                 f"security=reality&"
-                f"flow={flow}&"
                 f"pbk={reality_pbk}&"
                 f"fp=chrome&"
                 f"sni={clean_sni}&"
                 f"sid={short_id}#"
+                f"spx=%2F&"
+                f"encryption=none"
                 f"Nexor-VPN-{user_id}-{server['id']}"
             )
         else:
