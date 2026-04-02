@@ -802,7 +802,7 @@ async def check_payment(callback: types.CallbackQuery):
     await callback.message.edit_text("⏳ Проверяем оплату...")
 
     result = await make_api_request(
-        "/check-payment",
+        "/payment-status",
         method="GET",
         params={
             "payment_id": payment_id,
@@ -877,7 +877,7 @@ async def refresh_vless_handler(callback: types.CallbackQuery):
 
 async def process_payment_check(user_id: int, tariff_key: str, message: types.Message):
     result = await make_api_request(
-        "/check-payment",
+        "/payment-status",
         method="POST",
         json_data={
             "user_id": str(user_id),

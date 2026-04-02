@@ -1333,9 +1333,35 @@ async def activate_tariff(request: ActivateTariffRequest):
             update_user_balance(request.user_id, -tariff_price)
             
             success = await update_subscription_days(request.user_id, tariff_days, selected_server)
-            
+
             if not success:
                 return JSONResponse(status_code=500, content={"error": "Ошибка активации подписки"})
+
+            # 🔥 СОЗДАЁМ VLESS КЛЮЧ ЧЕРЕЗ XRAY
+            from xray_manager import XrayManager, generate_vless_key
+            from firebase_admin import firestore
+
+            xray = XrayManager()
+
+            email = f"user_{request.user_id}"
+
+            success_xray, user_uuid = await xray.add_user(email=email)
+
+            if not success_xray:
+                return JSONResponse(status_code=500, content={"error": "Ошибка создания VPN ключа"})
+
+            # 🔑 Генерация ссылки
+            vless_key = generate_vless_key(user_uuid, email)
+
+            # 💾 Сохраняем в Firestore
+            db.collection("vless_keys").document(f"{request.user_id}_{selected_server}").set({
+                "user_id": str(request.user_id),
+                "uuid": user_uuid,
+                "vless_key": vless_key,
+                "server_id": selected_server,
+                "is_active": True,
+                "created_at": firestore.SERVER_TIMESTAMP
+            })
             
             if user.get('referred_by'):
                 referrer_id = user['referred_by']
@@ -1597,9 +1623,38 @@ async def check_payment(payment_id: str, user_id: str):
                             selected_server = payment.get('selected_server')
                             
                             success = await update_subscription_days(tariff_user_id, tariff_days, selected_server)
-                            
+
                             if not success:
                                 return JSONResponse(status_code=500, content={"error": "Failed to activate subscription"})
+
+                            # 🔥 СОЗДАЁМ VLESS КЛЮЧ ЧЕРЕЗ XRAY
+                            from xray_manager import XrayManager, generate_vless_key
+                            from firebase_admin import firestore
+
+                            existing = db.collection("vless_keys")\
+                                .where("user_id", "==", str(tariff_user_id))\
+                                .where("server_id", "==", selected_server)\
+                                .get()
+
+                            if not existing:
+                                xray = XrayManager()
+                                email = f"user_{tariff_user_id}"
+
+                                success_xray, user_uuid = await xray.add_user(email=email)
+
+                                if not success_xray:
+                                    return JSONResponse(status_code=500, content={"error": "Ошибка создания VPN ключа"})
+
+                                vless_key = generate_vless_key(user_uuid, email)
+
+                                db.collection("vless_keys").document(f"{tariff_user_id}_{selected_server}").set({
+                                    "user_id": str(tariff_user_id),
+                                    "uuid": user_uuid,
+                                    "vless_key": vless_key,
+                                    "server_id": selected_server,
+                                    "is_active": True,
+                                    "created_at": firestore.SERVER_TIMESTAMP
+                                })
                             
                             user = get_user(tariff_user_id)
                             if user and user.get('referred_by'):
