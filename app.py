@@ -420,10 +420,12 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
             logger.info(f"🔍 Existing UUID: {vless_uuid}")
 
             # ✅ ГАРАНТИЯ — добавляем в основной сервер
-            await add_to_single_server(vless_uuid, main_server)
+            await add_to_single_server(uuid, main_server, user_id)
 
             # ⚡ Остальные — в фоне
-            asyncio.create_task(fast_add_to_xray(vless_uuid, other_servers))
+            asyncio.create_task(
+                fast_add_to_xray(uuid, other_servers, user_id)
+            )
 
             return vless_uuid
         
@@ -437,10 +439,12 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
         })
 
         # ✅ Сначала основной сервер
-        await add_to_single_server(new_uuid, main_server)
+        await add_to_single_server(uuid, main_server, user_id)
 
         # ⚡ Остальные — фоном
-        asyncio.create_task(fast_add_to_xray(new_uuid, other_servers))
+        asyncio.create_task(
+            fast_add_to_xray(uuid, other_servers, user_id)
+        )
 
         return new_uuid
         
@@ -448,19 +452,22 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
         logger.error(f"❌ Error: {e}")
         raise
 
-async def add_to_single_server(user_uuid: str, server_name: str):
+async def add_to_single_server(user_uuid: str, server_name: str, user_id: str):
     if server_name not in XRAY_SERVERS:
         raise Exception(f"Server {server_name} not found")
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{XRAY_SERVERS[server_name]['url']}/user",
+                f"{XRAY_SERVERS[server_name]['url']}/add-user",
                 headers={
-                    "X-API-Key": XRAY_SERVERS[server_name]["api_key"],
+                    "Authorization": XRAY_SERVERS[server_name]["api_key"],  # важно!
                     "Content-Type": "application/json"
                 },
-                json={"uuid": user_uuid},
+                json={
+                    "uuid": user_uuid,
+                    "email": str(user_id)  # 👈 ОБЯЗАТЕЛЬНО
+                },
                 timeout=5.0
             )
 
@@ -473,19 +480,22 @@ async def add_to_single_server(user_uuid: str, server_name: str):
         logger.error(f"❌ MAIN SERVER FAILED: {e}")
         raise
 
-async def fast_add_to_xray(user_uuid: str, servers_to_add):
+async def fast_add_to_xray(user_uuid: str, servers_to_add, user_id: str):
     try:
         async with httpx.AsyncClient() as client:
             for server_name in servers_to_add:
                 if server_name in XRAY_SERVERS:
                     try:
                         await client.post(
-                            f"{XRAY_SERVERS[server_name]['url']}/user",
+                            f"{XRAY_SERVERS[server_name]['url']}/add-user",
                             headers={
-                                "X-API-Key": XRAY_SERVERS[server_name]["api_key"],
+                                "Authorization": XRAY_SERVERS[server_name]["api_key"],
                                 "Content-Type": "application/json"
                             },
-                            json={"uuid": user_uuid},
+                            json={
+                                "uuid": user_uuid,
+                                "email": str(user_id)
+                            },
                             timeout=5.0
                         )
 
