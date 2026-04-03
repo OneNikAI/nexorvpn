@@ -1731,6 +1731,8 @@ async def check_payment(payment_id: str, user_id: str):
 @app.get("/get-vless-config")
 async def get_vless_config(user_id: str, server_id: str = None):
     try:
+        user_id = str(user_id)
+
         if not db:
             return JSONResponse(status_code=500, content={"error": "Database not connected"})
             
@@ -1743,6 +1745,9 @@ async def get_vless_config(user_id: str, server_id: str = None):
         
         if not user.get('has_subscription', False):
             return JSONResponse(status_code=400, content={"error": "No active subscription"})
+        
+        logger.info(f"USER_ID VALUE: {user_id}")
+        logger.info(f"USER_ID TYPE: {type(user_id)}")
         
         # СУПЕР БЫСТРОЕ получение UUID
         vless_uuid = await ensure_user_uuid(user_id, server_id)
