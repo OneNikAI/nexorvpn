@@ -420,11 +420,11 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
             logger.info(f"🔍 Existing UUID: {vless_uuid}")
 
             # ✅ ГАРАНТИЯ — добавляем в основной сервер
-            await add_to_single_server(uuid, main_server, user_id)
+            add_to_single_server(vless_uuid, main_server, user_id)
 
             # ⚡ Остальные — в фоне
             asyncio.create_task(
-                fast_add_to_xray(uuid, other_servers, user_id)
+                fast_add_to_xray(vless_uuid, other_servers, user_id)
             )
 
             return vless_uuid
@@ -438,12 +438,10 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
             'updated_at': firestore.SERVER_TIMESTAMP
         })
 
-        # ✅ Сначала основной сервер
-        await add_to_single_server(uuid, main_server, user_id)
+        await add_to_single_server(new_uuid, main_server, user_id)
 
-        # ⚡ Остальные — фоном
         asyncio.create_task(
-            fast_add_to_xray(uuid, other_servers, user_id)
+            fast_add_to_xray(new_uuid, other_servers, user_id)
         )
 
         return new_uuid
