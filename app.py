@@ -392,12 +392,11 @@ def update_user_balance(user_id: str, amount: float):
         logger.error(f"❌ Error updating balance: {e}")
         return False
 
-def generate_user_uuid():
-    """Генерация уникального UUID для пользователя"""
-    return str(uuid.uuid4())
+# def generate_user_uuid():
+#     """Генерация уникального UUID для пользователя"""
+#     return str(uuid.uuid4())
 
 async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
-    """Гарантирует что у пользователя есть UUID и он добавлен в Xray - СУПЕР БЫСТРО"""
     if not db:
         raise Exception("Database not connected")
     
@@ -410,45 +409,76 @@ async def ensure_user_uuid(user_id: str, server_id: str = None) -> str:
         
         user_data = user.to_dict()
         vless_uuid = user_data.get('vless_uuid')
-        
+
+        all_servers = list(XRAY_SERVERS.keys())
+
+        # 👉 выбираем основной сервер
+        main_server = server_id if server_id else all_servers[0]
+        other_servers = [s for s in all_servers if s != main_server]
+
         if vless_uuid:
-            logger.info(f"🔍 User {user_id} has existing UUID: {vless_uuid}")
-            
-            # БЫСТРОЕ ДОБАВЛЕНИЕ: не проверяем, просто добавляем
-            servers_to_add = [server_id] if server_id else list(XRAY_SERVERS.keys())
-            
-            # Запускаем добавление асинхронно без ожидания
-            asyncio.create_task(fast_add_to_xray(vless_uuid, servers_to_add))
-            
+            logger.info(f"🔍 Existing UUID: {vless_uuid}")
+
+            # ✅ ГАРАНТИЯ — добавляем в основной сервер
+            await add_to_single_server(vless_uuid, main_server)
+
+            # ⚡ Остальные — в фоне
+            asyncio.create_task(fast_add_to_xray(vless_uuid, other_servers))
+
             return vless_uuid
         
-        # Генерируем новый UUID
+        # 🆕 Новый UUID
         new_uuid = generate_user_uuid()
-        logger.info(f"🆕 Generating new UUID for user {user_id}: {new_uuid}")
-        
-        # Обновляем пользователя
+        logger.info(f"🆕 New UUID: {new_uuid}")
+
         user_ref.update({
             'vless_uuid': new_uuid,
             'updated_at': firestore.SERVER_TIMESTAMP
         })
-        
-        # Быстро добавляем на серверы
-        servers_to_add = [server_id] if server_id else list(XRAY_SERVERS.keys())
-        asyncio.create_task(fast_add_to_xray(new_uuid, servers_to_add))
-        
+
+        # ✅ Сначала основной сервер
+        await add_to_single_server(new_uuid, main_server)
+
+        # ⚡ Остальные — фоном
+        asyncio.create_task(fast_add_to_xray(new_uuid, other_servers))
+
         return new_uuid
         
     except Exception as e:
-        logger.error(f"❌ Error ensuring user UUID: {e}")
+        logger.error(f"❌ Error: {e}")
+        raise
+
+async def add_to_single_server(user_uuid: str, server_name: str):
+    if server_name not in XRAY_SERVERS:
+        raise Exception(f"Server {server_name} not found")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{XRAY_SERVERS[server_name]['url']}/user",
+                headers={
+                    "X-API-Key": XRAY_SERVERS[server_name]["api_key"],
+                    "Content-Type": "application/json"
+                },
+                json={"uuid": user_uuid},
+                timeout=5.0
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Bad response: {response.text}")
+
+        logger.info(f"✅ MAIN SERVER: {user_uuid} added to {server_name}")
+
+    except Exception as e:
+        logger.error(f"❌ MAIN SERVER FAILED: {e}")
         raise
 
 async def fast_add_to_xray(user_uuid: str, servers_to_add):
-    """Быстрое добавление в Xray без блокировки основного потока"""
     try:
-        for server_name in servers_to_add:
-            if server_name in XRAY_SERVERS:
-                try:
-                    async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as client:
+            for server_name in servers_to_add:
+                if server_name in XRAY_SERVERS:
+                    try:
                         await client.post(
                             f"{XRAY_SERVERS[server_name]['url']}/user",
                             headers={
@@ -458,11 +488,14 @@ async def fast_add_to_xray(user_uuid: str, servers_to_add):
                             json={"uuid": user_uuid},
                             timeout=5.0
                         )
-                    logger.info(f"⚡ FAST: User {user_uuid} sent to {server_name}")
-                except Exception as e:
-                    logger.warning(f"⚠️ Fast add failed for {server_name}: {e}")
+
+                        logger.info(f"⚡ Background: {user_uuid} -> {server_name}")
+
+                    except Exception as e:
+                        logger.warning(f"⚠️ Background failed {server_name}: {e}")
+
     except Exception as e:
-        logger.error(f"❌ Error in fast_add_to_xray: {e}")
+        logger.error(f"❌ Background error: {e}")
 
 def add_referral_bonus_immediately(referrer_id: str, referred_id: str):
     if not db: 
