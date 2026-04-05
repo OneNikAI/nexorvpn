@@ -23,7 +23,7 @@ class XrayManager:
                 response = await client.post(
                     f"{self.api_url}/add-user",
                     headers={
-                        "Authorization": f"Bearer {self.api_key}",
+                        "authorization": {self.api_key},
                         "Content-Type": "application/json"
                     },
                     json={
