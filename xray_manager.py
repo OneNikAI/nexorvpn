@@ -23,7 +23,7 @@ class XrayManager:
                 response = await client.post(
                     f"{self.api_url}/add-user",
                     headers={
-                        "authorization": {self.api_key},
+                        "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
@@ -31,9 +31,6 @@ class XrayManager:
                         "uuid": uuid_str
                     }
                 )
-
-            logger.info(f"API KEY VALUE: {self.api_key}")
-            logger.info(f"HEADERS: {{'authorization': self.api_key}}")
 
             try:
                 data = response.json()
