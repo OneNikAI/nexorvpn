@@ -5,8 +5,6 @@ import logging
 from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
-logger.info(f"API KEY VALUE: {self.api_key}")
-logger.info(f"HEADERS: {{'authorization': self.api_key}}")
 
 
 class XrayManager:
@@ -33,6 +31,9 @@ class XrayManager:
                         "uuid": uuid_str
                     }
                 )
+
+            logger.info(f"API KEY VALUE: {self.api_key}")
+            logger.info(f"HEADERS: {{'authorization': self.api_key}}")
 
             try:
                 data = response.json()
