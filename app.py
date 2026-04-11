@@ -1519,6 +1519,54 @@ async def activate_tariff(request: ActivateTariffRequest):
     except Exception as e:
         logger.error(f"❌ Error activating tariff: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+@app.post("/payment-webhook")
+async def payment_webhook(request: Request):
+    try:
+        data = await request.json()
+        logger.info(f"WEBHOOK: {data}")
+
+        payment = data.get("object", {})
+        status = payment.get("status")
+        metadata = payment.get("metadata", {})
+
+        if status != "succeeded":
+            return {"ok": True}
+
+        payment_id = metadata.get("payment_id")
+        user_id = metadata.get("user_id")
+        tariff = metadata.get("tariff")
+
+        logger.info(f"PAYMENT SUCCEEDED: {payment_id} user={user_id}")
+
+        # ⚡ 1. активируем подписку
+        tariff_data = TARIFFS[tariff]
+        days = tariff_data["days"]
+
+        await update_subscription_days(user_id, days, "London")
+
+        # 🔑 2. создаём VPN
+        xray = XrayManager()
+        email = f"user_{user_id}"
+
+        success, user_uuid = await xray.add_user(email=email)
+
+        if success and user_uuid:
+            vless = generate_vless_key(user_uuid, email)
+
+            update_payment_status(payment_id, "succeeded")
+
+            # 💬 уведомляем пользователя
+            await bot.send_message(
+                chat_id=int(user_id),
+                text=f"🎉 Оплата прошла!\n\n🔐 VPN готов:\n<code>{vless}</code>"
+            )
+
+        return {"ok": True}
+
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return {"ok": True}
 
 @app.post("/buy-with-balance")
 async def buy_with_balance(request: BuyWithBalanceRequest):

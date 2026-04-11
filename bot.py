@@ -611,19 +611,19 @@ async def create_payment(callback: types.CallbackQuery):
         types.InlineKeyboardButton(text="💳 Оплатить", url=payment_url)
     )
 
-    builder.row(
-        types.InlineKeyboardButton(
-            text="✅ Я оплатил",
-            callback_data=f"check_{payment_id}"
-        )
-    )
+    # builder.row(
+    #     types.InlineKeyboardButton(
+    #         text="✅ Я оплатил",
+    #         callback_data=f"check_{payment_id}"
+    #     )
+    # )
 
-    builder.row(
-    types.InlineKeyboardButton(
-        text="🔄 Проверить оплату",
-        callback_data=f"check_{payment_id}"
-    )
-)
+    # builder.row(
+    #     types.InlineKeyboardButton(
+    #         text="🔄 Проверить оплату",
+    #         callback_data=f"check_{payment_id}"
+    #     )
+    # )
 
     await callback.message.edit_text(
         f"""
