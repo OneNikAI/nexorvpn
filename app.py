@@ -1396,12 +1396,16 @@ async def activate_tariff(request: ActivateTariffRequest):
                 xray = XrayManager()
                 email = f"user_{request.user_id}"
 
-                success_xray, uuid = await xray.add_user(email=email)
+                success_xray, user_uuid = await xray.add_user(email=email)
 
-                if not success_xray:
-                    return JSONResponse(status_code=500, content={"error": "Failed to create VPN user"})
+                if not success_xray or not user_uuid:
+                    logger.error(f"Xray failed: success={success_xray}, uuid={user_uuid}")
+                    return JSONResponse(
+                        status_code=500,
+                        content={"error": "Failed to create VPN user"}
+                    )
 
-                vless_link = generate_vless_key(uuid, email)
+                vless_link = generate_vless_key(user_uuid, email)
 
             except Exception as e:
                 logger.error(f"Xray error: {e}")
