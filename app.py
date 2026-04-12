@@ -153,6 +153,64 @@ TARIFFS = {
 REFERRAL_BONUS_REFERRER = 50.0
 REFERRAL_BONUS_REFERRED = 100.0
 
+
+def get_default_server_id() -> Optional[str]:
+    """Возвращает первый доступный сервер из активной конфигурации."""
+    for server in VLESS_SERVERS:
+        server_id = server.get("id")
+        if server_id in XRAY_SERVERS:
+            return server_id
+
+    for server_id in XRAY_SERVERS.keys():
+        return server_id
+
+    return None
+
+
+def resolve_server_id(requested_server_id: Optional[str] = None) -> Optional[str]:
+    """Нормализует server_id и не даёт использовать отключённые серверы."""
+    if requested_server_id and requested_server_id in XRAY_SERVERS:
+        return requested_server_id
+
+    default_server = get_default_server_id()
+
+    if requested_server_id and requested_server_id != default_server:
+        logger.warning(f"⚠️ Requested server '{requested_server_id}' is unavailable, fallback to '{default_server}'")
+
+    return default_server
+
+
+async def send_telegram_payment_notification(user_id: str, text: str) -> bool:
+    """Отправляет уведомление пользователю напрямую через Telegram Bot API."""
+    token = os.getenv("TOKEN")
+
+    if not token:
+        logger.warning("⚠️ Telegram notification skipped: TOKEN is missing")
+        return False
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={
+                    "chat_id": int(user_id),
+                    "text": text,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                },
+            )
+
+        if response.status_code != 200:
+            logger.error(f"❌ Telegram notification failed for user {user_id}: {response.status_code} - {response.text[:300]}")
+            return False
+
+        logger.info(f"✅ Telegram payment notification sent to user {user_id}")
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Telegram notification error for user {user_id}: {e}")
+        return False
+
 # Инициализация Firebase
 # Инициализация Firebase (без краша)
 try:
@@ -670,6 +728,72 @@ def create_user_vless_configs(user_id: str, vless_uuid: str, server_id: str = No
         configs.append(config_data)
     
     return configs
+
+async def finalize_successful_tariff_payment(payment_id: str, user_id: str, tariff: str, selected_server: Optional[str] = None, yookassa_id: str = None):
+    """Единая обработка успешной оплаты тарифа из webhook или ручной проверки."""
+    if not payment_id:
+        raise ValueError("payment_id is required")
+    if not user_id:
+        raise ValueError("user_id is required")
+    if tariff not in TARIFFS:
+        raise ValueError(f"Unknown tariff: {tariff}")
+
+    existing_payment = get_payment(payment_id)
+    if existing_payment and existing_payment.get("status") == "succeeded":
+        logger.info(f"ℹ️ Payment {payment_id} already processed")
+        return {"ok": True, "already_processed": True}
+
+    resolved_server = resolve_server_id(selected_server)
+    if not resolved_server:
+        raise RuntimeError("No active Xray servers configured")
+
+    tariff_data = TARIFFS[tariff]
+    days = tariff_data["days"]
+
+    success = await update_subscription_days(user_id, days, resolved_server)
+    if not success:
+        raise RuntimeError(f"Failed to activate subscription for user {user_id}")
+
+    user = get_user(user_id)
+    if user and user.get("referred_by"):
+        referrer_id = user["referred_by"]
+        referral_id = f"{referrer_id}_{user_id}"
+        referral_exists = db.collection("referrals").document(referral_id).get().exists if db else True
+
+        if not referral_exists:
+            add_referral_bonus_immediately(referrer_id, user_id)
+
+    vless_uuid = await ensure_user_uuid(user_id, resolved_server)
+    ready_servers = await sync_user_to_xray(user_id, vless_uuid, resolved_server)
+    if not ready_servers:
+        raise RuntimeError(f"Failed to sync user {user_id} with Xray after payment")
+
+    configs = create_user_vless_configs(user_id, vless_uuid, resolved_server, allowed_server_ids=ready_servers)
+    if not configs:
+        raise RuntimeError(f"Failed to create VLESS config for user {user_id}")
+
+    vless_link = configs[0].get("vless_link", "")
+    update_payment_status(payment_id, "succeeded", yookassa_id)
+
+    tariff_name = tariff_data.get("name", tariff)
+    notification_text = (
+        f"🎉 <b>Оплата прошла успешно!</b>\n\n"
+        f"📦 Тариф: <b>{tariff_name}</b>\n"
+        f"🌍 Сервер: <b>{resolved_server}</b>\n"
+        f"⏳ Дней добавлено: <b>{days}</b>\n\n"
+        f"🔐 <b>Ваш VPN ключ:</b>\n<code>{vless_link}</code>"
+    )
+    await send_telegram_payment_notification(user_id, notification_text)
+
+    logger.info(f"✅ Successful payment processed: payment_id={payment_id}, user_id={user_id}, server={resolved_server}")
+    return {
+        "ok": True,
+        "payment_id": payment_id,
+        "user_id": user_id,
+        "server_id": resolved_server,
+        "vless_link": vless_link,
+    }
+
 
 def process_subscription_days(user_id: str) -> bool:
     """Обработка дней подписки с удалением из Xray при окончании"""
@@ -1360,7 +1484,9 @@ async def activate_tariff(request: ActivateTariffRequest):
         tariff_price = tariff_data["price"]
         tariff_days = tariff_data["days"]
 
-        selected_server = request.selected_server or user.get("preferred_server") or "London"
+        selected_server = resolve_server_id(request.selected_server or user.get("preferred_server"))
+        if not selected_server:
+            return JSONResponse(status_code=500, content={"error": "No active servers configured"})
 
         payment_id = str(uuid.uuid4())
 
@@ -1524,7 +1650,7 @@ async def activate_tariff(request: ActivateTariffRequest):
 async def payment_webhook(request: Request):
     try:
         data = await request.json()
-        logger.info(f"WEBHOOK: {data}")
+        logger.info(f"WEBHOOK /payment-webhook: {data}")
 
         payment = data.get("object", {})
         status = payment.get("status")
@@ -1533,39 +1659,18 @@ async def payment_webhook(request: Request):
         if status != "succeeded":
             return {"ok": True}
 
-        payment_id = metadata.get("payment_id")
-        user_id = metadata.get("user_id")
-        tariff = metadata.get("tariff")
-
-        logger.info(f"PAYMENT SUCCEEDED: {payment_id} user={user_id}")
-
-        # ⚡ 1. активируем подписку
-        tariff_data = TARIFFS[tariff]
-        days = tariff_data["days"]
-
-        await update_subscription_days(user_id, days, "London")
-
-        # 🔑 2. создаём VPN
-        xray = XrayManager()
-        email = f"user_{user_id}"
-
-        success, user_uuid = await xray.add_user(email=email)
-
-        if success and user_uuid:
-            vless = generate_vless_key(user_uuid, email)
-
-            update_payment_status(payment_id, "succeeded")
-
-            # 💬 уведомляем пользователя
-            await bot.send_message(
-                chat_id=int(user_id),
-                text=f"🎉 Оплата прошла!\n\n🔐 VPN готов:\n<code>{vless}</code>"
-            )
+        await finalize_successful_tariff_payment(
+            payment_id=metadata.get("payment_id"),
+            user_id=metadata.get("user_id"),
+            tariff=metadata.get("tariff"),
+            selected_server=metadata.get("selected_server"),
+            yookassa_id=payment.get("id"),
+        )
 
         return {"ok": True}
 
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.error(f"❌ payment-webhook error: {e}")
         return {"ok": True}
 
 @app.post("/buy-with-balance")
@@ -1578,7 +1683,9 @@ async def buy_with_balance(request: BuyWithBalanceRequest):
         if not user:
             return JSONResponse(status_code=404, content={"error": "User not found"})
         
-        selected_server = request.selected_server or "London"
+        selected_server = resolve_server_id(request.selected_server)
+        if not selected_server:
+            return JSONResponse(status_code=500, content={"error": "No active servers configured"})
         
         user_balance = user.get('balance', 0.0)
         
@@ -1831,28 +1938,35 @@ async def check_payment(payment_id: str, user_id: str):
 async def yookassa_webhook(request: Request):
     try:
         data = await request.json()
+        logger.info(f"WEBHOOK /yookassa-webhook: {data}")
 
         event = data.get("event")
         payment = data.get("object", {})
+        metadata = payment.get("metadata", {})
 
-        payment_id = payment.get("metadata", {}).get("payment_id")
+        payment_id = metadata.get("payment_id")
         yookassa_id = payment.get("id")
 
         if not payment_id:
+            logger.warning("⚠️ YooKassa webhook received without internal payment_id")
             return {"ok": True}
 
-        # 🔥 УСПЕШНАЯ ОПЛАТА
         if event == "payment.succeeded":
-            update_payment_status(payment_id, "succeeded", yookassa_id)
+            await finalize_successful_tariff_payment(
+                payment_id=payment_id,
+                user_id=metadata.get("user_id"),
+                tariff=metadata.get("tariff"),
+                selected_server=metadata.get("selected_server"),
+                yookassa_id=yookassa_id,
+            )
 
-        # ❌ ОТМЕНА
         elif event == "payment.canceled":
             update_payment_status(payment_id, "canceled", yookassa_id)
 
         return {"ok": True}
 
     except Exception as e:
-        logger.error(f"❌ Webhook error: {e}")
+        logger.error(f"❌ yookassa-webhook error: {e}")
         return {"ok": False}
 
 @app.post("/save-vless-key")
